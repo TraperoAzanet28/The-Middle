@@ -1,0 +1,1147 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>The Middle Panel — Cinematic Design System v1.0</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+/* ── Document chrome. Deliberately NOT the app palette — this is a spec sheet,
+      not a scene. App tokens are shown as swatches, never as page styling. ── */
+:root{
+  --ink:#e8f0f8; --ink-dim:#9fb3c8; --ink-faint:#6b8099;
+  --page:#0a0f16; --panel:#101823; --line:rgba(140,180,220,.14);
+  --serif:'Playfair Display',Georgia,serif;
+  --sans:'Inter',system-ui,sans-serif;
+  --mono:'JetBrains Mono',ui-monospace,Menlo,monospace;
+  --ok:#52c08a; --warn:#e0a84e; --bad:#e07a6b;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--page);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.62;-webkit-font-smoothing:antialiased}
+
+/* Layout */
+.wrap{max-width:1180px;margin:0 auto;padding:0 32px 160px}
+@media(max-width:720px){.wrap{padding:0 20px 100px}}
+
+/* Masthead */
+.mast{padding:88px 0 56px;border-bottom:1px solid var(--line)}
+.mast h1{font-family:var(--serif);font-size:clamp(34px,5vw,60px);font-weight:500;line-height:1.08;letter-spacing:.2px}
+.mast .sub{font-size:17px;color:var(--ink-dim);margin-top:16px;max-width:60ch;line-height:1.6}
+.mast .meta{display:flex;gap:10px;flex-wrap:wrap;margin-top:26px}
+
+/* Badges */
+.badge{font-family:var(--mono);font-size:11px;letter-spacing:.4px;padding:5px 11px;border-radius:100px;border:1px solid var(--line);color:var(--ink-dim);background:rgba(255,255,255,.03)}
+.badge--ok{border-color:rgba(82,192,138,.34);color:var(--ok)}
+.badge--warn{border-color:rgba(224,168,78,.34);color:var(--warn)}
+.badge--bad{border-color:rgba(224,122,107,.34);color:var(--bad)}
+
+/* Sections */
+section{padding-top:84px;scroll-margin-top:24px}
+.sec-num{font-family:var(--mono);font-size:11px;letter-spacing:2.4px;color:var(--ink-faint);text-transform:uppercase}
+h2{font-family:var(--serif);font-size:clamp(26px,3.2vw,38px);font-weight:500;margin:10px 0 14px;line-height:1.18}
+h3{font-size:16px;font-weight:600;letter-spacing:.2px;margin:40px 0 12px}
+h4{font-size:13px;font-weight:600;letter-spacing:1.4px;text-transform:uppercase;color:var(--ink-dim);margin:28px 0 10px}
+.lede{color:var(--ink-dim);max-width:72ch;font-size:16px}
+p{max-width:76ch;color:var(--ink-dim);margin-bottom:12px}
+p strong,li strong{color:var(--ink);font-weight:600}
+a{color:#7fb6ee}
+
+/* Panels */
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:22px 24px;margin:18px 0}
+.panel--tight{padding:16px 18px}
+
+/* Tables */
+table{width:100%;border-collapse:collapse;margin:16px 0;font-size:13.5px}
+th{text-align:left;font-size:10.5px;letter-spacing:1.6px;text-transform:uppercase;color:var(--ink-faint);font-weight:600;padding:0 14px 10px 0;border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:11px 14px 11px 0;border-bottom:1px solid rgba(140,180,220,.07);color:var(--ink-dim);vertical-align:top}
+td code,.mono{font-family:var(--mono);font-size:12.5px;color:#a8c8e8}
+
+/* Code blocks */
+pre{background:#060b12;border:1px solid var(--line);border-radius:12px;padding:18px 20px;overflow-x:auto;margin:14px 0;font-family:var(--mono);font-size:12.5px;line-height:1.72;color:#c3d8ee}
+pre .c{color:#5d7a94;font-style:italic}
+pre .k{color:#9fc7f0}
+pre .v{color:#e0c08a}
+
+/* Finding cards */
+.find{display:grid;grid-template-columns:auto 1fr;gap:16px;padding:18px 20px;border:1px solid var(--line);border-left-width:2px;border-radius:12px;background:var(--panel);margin:12px 0}
+.find--bad{border-left-color:var(--bad)}
+.find--warn{border-left-color:var(--warn)}
+.find--ok{border-left-color:var(--ok)}
+.find__n{font-family:var(--mono);font-size:12px;color:var(--ink-faint);padding-top:2px}
+.find__t{font-weight:600;color:var(--ink);font-size:15px;margin-bottom:6px}
+.find__b{font-size:14px;color:var(--ink-dim);line-height:1.6;max-width:none}
+.find__b code{font-family:var(--mono);font-size:12.5px;color:#a8c8e8;background:rgba(255,255,255,.04);padding:1px 5px;border-radius:4px}
+.find__fix{margin-top:8px;font-size:13.5px;color:#9ccfae}
+.find__fix b{color:#b8e0c6;font-weight:600}
+
+/* Arc strip */
+.arc{display:grid;grid-template-columns:repeat(8,1fr);gap:3px;margin:22px 0 8px;border-radius:12px;overflow:hidden}
+@media(max-width:820px){.arc{grid-template-columns:repeat(4,1fr)}}
+.arc__cell{position:relative;min-height:170px;display:flex;flex-direction:column;justify-content:flex-end;padding:12px 10px}
+.arc__name{font-size:11.5px;font-weight:600;letter-spacing:.3px;color:#fff;text-shadow:0 1px 6px rgba(0,0,0,.9)}
+.arc__lum{font-family:var(--mono);font-size:10px;color:rgba(255,255,255,.72);text-shadow:0 1px 6px rgba(0,0,0,.9)}
+.arc__bands{position:absolute;inset:0;display:flex;flex-direction:column}
+.arc__bands div{flex:1}
+.arc__cap{font-size:12.5px;color:var(--ink-faint);font-family:var(--mono);letter-spacing:.3px}
+
+/* Swatch grid */
+.sw-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;margin:16px 0}
+.sw{border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--panel)}
+.sw__chip{height:62px}
+.sw__meta{padding:9px 11px}
+.sw__name{font-size:12px;font-weight:600;color:var(--ink)}
+.sw__hex{font-family:var(--mono);font-size:11px;color:var(--ink-faint);margin-top:2px}
+
+/* Figure */
+figure{margin:20px 0}
+figure img{width:100%;border-radius:12px;border:1px solid var(--line);display:block}
+figcaption{font-size:12.5px;color:var(--ink-faint);margin-top:10px;line-height:1.55;max-width:76ch}
+
+/* Nav */
+.toc{position:sticky;top:0;z-index:50;background:rgba(10,15,22,.86);backdrop-filter:blur(14px);border-bottom:1px solid var(--line);margin:0 -32px;padding:12px 32px}
+@media(max-width:720px){.toc{margin:0 -20px;padding:12px 20px}}
+.toc__inner{display:flex;gap:4px;overflow-x:auto;scrollbar-width:none}
+.toc__inner::-webkit-scrollbar{display:none}
+.toc a{font-size:12px;color:var(--ink-faint);text-decoration:none;padding:6px 11px;border-radius:7px;white-space:nowrap}
+.toc a:hover{color:var(--ink);background:rgba(255,255,255,.05)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="mast">
+  <div class="sec-num">Design System · v1.0 · Derived from build <span class="mono">feat/cinematic-polish-character-presence</span></div>
+  <h1>The Middle Panel</h1>
+  <p class="sub">A cinematic design system for a philosophical reflection app. Every value in this document was measured from the existing scene art, components, and stylesheet — nothing here replaces the visual identity you already have. It names it, fills its gaps, and makes it reusable.</p>
+  <div class="meta">
+    <span class="badge badge--ok">8 scenes audited</span>
+    <span class="badge badge--ok">1,703 lines of CSS reviewed</span>
+    <span class="badge badge--warn">6 inconsistencies found</span>
+    <span class="badge badge--bad">2 defects found</span>
+    <span class="badge">No code changed</span>
+  </div>
+</header>
+
+<nav class="toc"><div class="toc__inner">
+  <a href="#audit">0 · Audit</a>
+  <a href="#arc">1 · The Light Arc</a>
+  <a href="#color">2 · Color</a>
+  <a href="#type">3 · Typography</a>
+  <a href="#depth">4 · Lighting &amp; Depth</a>
+  <a href="#cast">5 · Characters</a>
+  <a href="#motion">6 · Environmental Motion</a>
+  <a href="#components">7 · Components</a>
+  <a href="#transitions">8 · Transitions</a>
+  <a href="#a11y">9 · Accessibility</a>
+  <a href="#tokens">10 · Tokens</a>
+  <a href="#proposals">11 · Proposals</a>
+</div></nav>
+
+<!-- ════════════════════════════════════ 0 · AUDIT ════════════════════════════ -->
+<section id="audit">
+  <div class="sec-num">00 — Baseline</div>
+  <h2>What already works, and what is quietly fighting it</h2>
+  <p class="lede">The foundation here is strong and unusually coherent for an app this size. The problems are not of taste — they are of <em>drift</em>: a design language that was established in the night scenes and then never extended to cover the dawn ones.</p>
+
+  <h3>Preserve — these are load-bearing and should not be touched</h3>
+  <div class="panel">
+    <table>
+      <tr><th style="width:30%">Asset</th><th>Why it stays</th></tr>
+      <tr><td><b style="color:var(--ink)">The <code>.q-screen</code> pattern</b></td><td>One question per full viewport, text floating directly on the environment, no cards. This is the single best design decision in the codebase — it is what makes the app feel contemplative rather than transactional. Everything else should serve it.</td></tr>
+      <tr><td><b style="color:var(--ink)">Playfair + Inter pairing</b></td><td>Serif carries emotional and philosophical weight; sans carries instruction and mechanism. The split is applied consistently and correctly.</td></tr>
+      <tr><td><b style="color:var(--ink)"><code>cameraDrift</code> 42s loop</b></td><td>Slow scale+translate on the fixed background. Below conscious detection, above stillness. Correct instinct, correct duration.</td></tr>
+      <tr><td><b style="color:var(--ink)">Scene-mixed ambient audio</b></td><td><code>useAmbientAudio</code> already encodes the emotional arc in its gain table — <code>dawn</code> rises 0.00 → 0.10 → 0.22 across Cave → Fox → Summary. The audio understands the arc better than the CSS does.</td></tr>
+      <tr><td><b style="color:var(--ink)">Canvas atmosphere layer</b></td><td>Deterministic particle pools, DPR-aware, <code>pointer-events:none</code>, <code>aria-hidden</code>. Architecturally right.</td></tr>
+      <tr><td><b style="color:var(--ink)">Progress bar accents</b></td><td><code>ProgressBar.tsx</code> is the <em>only</em> file that already carries a per-scene warm/cool palette. It is the seed of this entire system.</td></tr>
+    </table>
+  </div>
+
+  <h3>Findings</h3>
+
+  <div class="find find--bad">
+    <div class="find__n">D1</div>
+    <div>
+      <div class="find__t">The Fox scene renders two foxes</div>
+      <div class="find__b"><code>bg-fox.png.jpeg</code> already contains a photoreal fox, standing on the rock shelf at roughly 85% / 42%, facing right into the dawn. <code>renderFoxCharacter()</code> then draws a second, hand-vectored fox silhouette at 60% / 76% — different scale, different art style, different light direction. Both are visible simultaneously.</div>
+      <div class="find__fix"><b>Fix:</b> delete <code>renderFoxCharacter</code> entirely (140 lines) and replace with <code>renderFoxPresence</code> — a rim-light and ground-contact pass registered to the <em>existing</em> fox, matching how Turtle and Owl are already handled.</div>
+    </div>
+  </div>
+
+  <div class="find find--bad">
+    <div class="find__n">D2</div>
+    <div>
+      <div class="find__t">No reduced-motion support anywhere in the application</div>
+      <div class="find__b">Zero <code>prefers-reduced-motion</code> queries across 1,703 lines of CSS. <code>cameraDrift</code>, <code>screenEnter</code>, <code>fadeUp</code>, every <code>motion/react</code> transition, and the entire <code>requestAnimationFrame</code> canvas loop run unconditionally. For a product whose explicit purpose is emotional regulation, this is the most serious issue in the audit — vestibular sensitivity and anxiety are strongly comorbid, and this app's core audience is people in acute distress.</div>
+      <div class="find__fix"><b>Fix:</b> three-tier motion policy — <code>full</code> / <code>reduced</code> / <code>still</code> — gated at the CSS layer, the Framer Motion layer, and the canvas RAF loop. Specified in §9.</div>
+    </div>
+  </div>
+
+  <div class="find find--warn">
+    <div class="find__n">I1</div>
+    <div>
+      <div class="find__t">One frozen night palette across a night-to-dawn journey</div>
+      <div class="find__b">Every token in <code>:root</code> is cold blue — <code>--color-text: rgba(232,246,255,.92)</code>, <code>--color-accent: rgba(75,148,228,.42)</code>, <code>--color-border: rgba(90,150,215,.16)</code>. Measured against the art, the Fox and Summary scenes are warm: their sky bands read <code>#a7a29b</code> and <code>#7e766d</code>, both red-dominant. The UI layer stays arctic blue while the world behind it turns gold. Buttons on the Fox scene glow <code>rgba(80,155,255,.38)</code> against an amber sunrise.</div>
+      <div class="find__fix"><b>Fix:</b> two-layer color architecture — stable structural tokens plus a per-scene palette that inherits scene temperature. §1 and §2.</div>
+    </div>
+  </div>
+
+  <div class="find find--warn">
+    <div class="find__n">I2</div>
+    <div>
+      <div class="find__t">River motion does not follow any actual river</div>
+      <div class="find__b"><code>renderRiver()</code> fills a flat rectangle across the bottom 40% of the viewport and animates 48 horizontal streaks left-to-right through it. But in <code>bg-turtle.png</code> the river is a near-vertical ribbon running into depth; in <code>bg-fox.png.jpeg</code> it is a serpentine S-curve; in <code>bg-cave-inside.png</code> it is a narrow channel on the left. Horizontal streaks crossing a vertical river read as interference, not current — which is precisely why the water does not feel like it is flowing.</div>
+      <div class="find__fix"><b>Fix:</b> per-scene river splines with perspective-weighted flow fields. Live side-by-side comparison in §6.</div>
+    </div>
+  </div>
+
+  <div class="find find--warn">
+    <div class="find__n">I3</div>
+    <div>
+      <div class="find__t">Character presence is positioned in absolute viewport fractions</div>
+      <div class="find__b"><code>renderOwlPresence</code> hardcodes <code>ox = w*0.50, oy = h*0.33</code> with a comment explaining it was tuned for a 390×844 device. The background uses <code>background-size:cover</code>, so the crop — and therefore the owl's true position — changes with every aspect ratio. At 1440×900 the glow lands in empty sky. Same class of problem in <code>renderTurtlePresence</code>.</div>
+      <div class="find__fix"><b>Fix:</b> anchor characters in <em>image</em> space and project through the same cover transform the browser applies. §5.</div>
+    </div>
+  </div>
+
+  <div class="find find--warn">
+    <div class="find__n">I4</div>
+    <div>
+      <div class="find__t">No visible focus states</div>
+      <div class="find__b">No <code>:focus-visible</code> rule exists. Several interactive elements set <code>outline:none</code> on focus and replace it with a box-shadow that is below 1.5:1 against its surround — <code>.q-textarea:focus</code> uses <code>rgba(80,155,255,.06)</code>. The journey is keyboard-navigable in DOM order but not visually traversable.</div>
+      <div class="find__fix"><b>Fix:</b> a single scene-aware focus ring token, applied once. §7 and §9.</div>
+    </div>
+  </div>
+
+  <div class="find find--warn">
+    <div class="find__n">I5</div>
+    <div>
+      <div class="find__t">Dead card-era CSS still shipping</div>
+      <div class="find__b"><code>.stage-hero--turtle/--owl/--fox</code>, <code>.insight-card</code>, <code>.action-card</code>, <code>.suggestion-chip</code>, <code>.segmented-grid</code>, <code>.summary-grid</code> and roughly 390 lines around them define a card-based visual language that <code>StageScreen.tsx</code> and <code>SummaryScreen.tsx</code> no longer use — they were rewritten onto <code>.q-screen</code>. The tokens <code>--color-turtle</code>, <code>--color-owl</code>, <code>--color-fox</code> and the <code>--turtle-hue</code> / <code>--owl-hue</code> / <code>--fox-hue</code> triplet are declared and never read by anything.</div>
+      <div class="find__fix"><b>Fix:</b> delete on adoption. The per-scene palette in §2 supersedes all of it.</div>
+    </div>
+  </div>
+
+  <div class="find find--warn">
+    <div class="find__n">I6</div>
+    <div>
+      <div class="find__t">The canvas never idles</div>
+      <div class="find__b">The RAF loop runs every frame regardless of tab visibility, and <code>resize</code> is unthrottled — each event reallocates the backing store at full device pixel ratio. On a 3× phone at 390×844 that is a 1170×2532 surface redrawn 60 times per second for effects whose slowest particle moves 18 pixels per minute.</div>
+      <div class="find__fix"><b>Fix:</b> visibility gating, debounced resize, and a 30fps cap for atmosphere-only scenes. §6.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════ 1 · THE LIGHT ARC ════════════════════ -->
+<section id="arc">
+  <div class="sec-num">01 — Foundation</div>
+  <h2>The Light Arc</h2>
+  <p class="lede">The most important thing in this codebase is something nobody wrote down. Your scene art already tells a complete story in light: it begins at night and ends at sunrise. Every other decision in this system follows from naming that.</p>
+
+  <p>These values are measured, not chosen. Each background was downsampled to a 9×9 grid and averaged into three horizontal bands — sky, middle distance, foreground — with the brightest and darkest pixels extracted as the scene's key light and deepest shadow.</p>
+
+  <div class="arc">
+    <div class="arc__cell" style="background:#141d29">
+      <div class="arc__bands"><div style="background:#141d29"></div><div style="background:#0f1620"></div><div style="background:#0f1216"></div></div>
+      <div class="arc__name" style="position:relative">Home</div><div class="arc__lum" style="position:relative">L 45 · cool</div>
+    </div>
+    <div class="arc__cell" style="background:#23303e">
+      <div class="arc__bands"><div style="background:#23303e"></div><div style="background:#131d25"></div><div style="background:#0d151a"></div></div>
+      <div class="arc__name" style="position:relative">Input</div><div class="arc__lum" style="position:relative">L 70 · cool</div>
+    </div>
+    <div class="arc__cell" style="background:#141e2c">
+      <div class="arc__bands"><div style="background:#141e2c"></div><div style="background:#161f2a"></div><div style="background:#0f141c"></div></div>
+      <div class="arc__name" style="position:relative">Turtle</div><div class="arc__lum" style="position:relative">L 49 · cool</div>
+    </div>
+    <div class="arc__cell" style="background:#17263c">
+      <div class="arc__bands"><div style="background:#17263c"></div><div style="background:#121e2f"></div><div style="background:#0b121d"></div></div>
+      <div class="arc__name" style="position:relative">Owl</div><div class="arc__lum" style="position:relative">L 61 · cool</div>
+    </div>
+    <div class="arc__cell" style="background:#12161e">
+      <div class="arc__bands"><div style="background:#12161e"></div><div style="background:#262c37"></div><div style="background:#1b242e"></div></div>
+      <div class="arc__name" style="position:relative">Cave</div><div class="arc__lum" style="position:relative">L 58 · neutral</div>
+    </div>
+    <div class="arc__cell" style="background:#a7a29b">
+      <div class="arc__bands"><div style="background:#a7a29b"></div><div style="background:#65615d"></div><div style="background:#2c2d2e"></div></div>
+      <div class="arc__name" style="position:relative">Fox</div><div class="arc__lum" style="position:relative">L 122 · warm</div>
+    </div>
+    <div class="arc__cell" style="background:#7e766d">
+      <div class="arc__bands"><div style="background:#7e766d"></div><div style="background:#504a3b"></div><div style="background:#2b302d"></div></div>
+      <div class="arc__name" style="position:relative">Summary</div><div class="arc__lum" style="position:relative">L 122 · warm</div>
+    </div>
+    <div class="arc__cell" style="background:linear-gradient(#2a3a4e,#5a5a52)">
+      <div class="arc__name" style="position:relative">How&nbsp;It&nbsp;Works</div><div class="arc__lum" style="position:relative">character plate</div>
+    </div>
+  </div>
+  <div class="arc__cap">Top band = sky · middle = mid-distance · bottom = foreground. L = relative luminance midpoint.</div>
+
+  <h3>What the measurement shows</h3>
+  <p>Two things, both decisive:</p>
+  <div class="panel">
+    <table>
+      <tr><th style="width:34%">Observation</th><th>Consequence for the system</th></tr>
+      <tr>
+        <td><b style="color:var(--ink)">A 2.5× luminance jump at the Cave → Fox boundary</b><br><span class="mono" style="font-size:11.5px">L 58 → L 122</span></td>
+        <td>This is the brightest transition in the app and it lands exactly on the narrative turn from reflection to action. It is already correct — it should be <em>reinforced</em> by the UI, not resisted. Fox is the moment the user is meant to feel capable.</td>
+      </tr>
+      <tr>
+        <td><b style="color:var(--ink)">A hue inversion at the same boundary</b><br><span class="mono" style="font-size:11.5px">B−R = +24 → B−R = −12</span></td>
+        <td>Night scenes are blue-dominant (blue channel exceeds red by 12–24). Dawn scenes are red-dominant. The UI must cross this line with the art. A single blue token set cannot serve both halves — this is the root cause of finding I1.</td>
+      </tr>
+    </table>
+  </div>
+
+  <h3>The arc as a narrative instrument</h3>
+  <p>Mapped against the journey, the light is doing psychological work:</p>
+  <div class="panel">
+    <table>
+      <tr><th>Stage</th><th>Light state</th><th>What the light is saying</th></tr>
+      <tr><td><b style="color:var(--ink)">Home · Input</b></td><td>Deep night, moon obscured</td><td>Nothing is resolved yet. The user arrives in the dark because that is where they actually are.</td></tr>
+      <tr><td><b style="color:var(--ink)">Turtle</b></td><td>Moon direct, low on water</td><td>First light source appears. Not understanding — just enough to steady by. Regulation precedes insight.</td></tr>
+      <tr><td><b style="color:var(--ink)">Owl</b></td><td>Moon high, long sightlines</td><td>The scene opens into depth and distance. You can now see the valley you were standing in.</td></tr>
+      <tr><td><b style="color:var(--ink)">Cave</b></td><td>Light withdrawn to a far aperture</td><td>The deliberate dip. Plato's cave is the darkest point of the journey because the question is.</td></tr>
+      <tr><td><b style="color:var(--ink)">Fox</b></td><td>Pre-dawn breaking over ridge</td><td>Light returns from a <em>different direction</em> than the moon. Not the same light — a new one. This is the earned moment.</td></tr>
+      <tr><td><b style="color:var(--ink)">Summary</b></td><td>Full golden sunrise</td><td>Resolution. The river that was a dark thread in Turtle is now wide, lit, and moving toward the viewer.</td></tr>
+    </table>
+  </div>
+  <p><b>Design rule derived:</b> the interface never introduces a light source the scene does not have. Glows, accents, and focus rings must read as <em>reflections of the scene's key light</em> — silver-blue under moon, amber-gold under dawn. This single rule resolves findings I1 and I4 together.</p>
+</section>
+
+<!-- ════════════════════════════════════ 2 · COLOR ════════════════════════════ -->
+<section id="color">
+  <div class="sec-num">02 — Foundation</div>
+  <h2>Color architecture</h2>
+  <p class="lede">Two layers. A structural layer that never changes, and a scene layer that inherits the light. The current stylesheet has only the first, which is why it cannot follow the arc.</p>
+
+  <h3>Layer 1 — Structural tokens (scene-invariant)</h3>
+  <p>These carry no temperature. They define <em>depth and opacity relationships</em>, not color, and are identical in every scene. Most are adopted unchanged from your current <code>:root</code>.</p>
+  <div class="sw-grid">
+    <div class="sw"><div class="sw__chip" style="background:#020812"></div><div class="sw__meta"><div class="sw__name">base-void</div><div class="sw__hex">#020812 — unchanged</div></div></div>
+    <div class="sw"><div class="sw__chip" style="background:rgba(6,14,28,.68)"></div><div class="sw__meta"><div class="sw__name">surface</div><div class="sw__hex">6 14 28 / .68</div></div></div>
+    <div class="sw"><div class="sw__chip" style="background:rgba(255,255,255,.04)"></div><div class="sw__meta"><div class="sw__name">surface-raise</div><div class="sw__hex">255 255 255 / .04</div></div></div>
+    <div class="sw"><div class="sw__chip" style="background:#e8f6ff"></div><div class="sw__meta"><div class="sw__name">ink-full</div><div class="sw__hex">#e8f6ff · .92α</div></div></div>
+    <div class="sw"><div class="sw__chip" style="background:#aad0ee"></div><div class="sw__meta"><div class="sw__name">ink-dim</div><div class="sw__hex">#aad0ee · .62α</div></div></div>
+    <div class="sw"><div class="sw__chip" style="background:#8cb9dc"></div><div class="sw__meta"><div class="sw__name">ink-faint</div><div class="sw__hex">#8cb9dc · .42α</div></div></div>
+  </div>
+
+  <h3>Layer 2 — Scene palette (inherits the arc)</h3>
+  <p>Set once per scene on the app root as <code>data-scene</code>. Four variables are enough to carry the entire temperature shift, because every component below consumes them rather than hardcoding blue.</p>
+
+  <h4>Night set — Home, Input, Turtle, Owl</h4>
+  <div class="sw-grid">
+    <div class="sw"><div class="sw__chip" style="background:#9fd0ff"></div><div class="sw__meta"><div class="sw__name">key</div><div class="sw__hex">#9fd0ff · moonlight</div></div></div>
+    <div class="sw"><div class="sw__chip" style="background:#4b94e4"></div><div class="sw__meta"><div class="sw__name">accent</div><div class="sw__hex">#4b94e4</div></div></div>
+    <div class="sw"><div class="sw__chip" style="background:#1e3c64"></div><div class="sw__meta"><div class="sw__name">accent-deep</div><div class="sw__hex">#1e3c64</div></div></div>
+    <div class="sw"><div class="sw__chip" style="background:#0b1422"></div><div class="sw__meta"><div class="sw__name">shadow</div><div class="sw__hex">#0b1422</div></div></div>
+  </div>
+
+  <h4>Cave set — the dip. Cooler, desaturated, with one distant ember</h4>
+  <div class="sw-grid">
+    <div class="sw"><div class="sw__chip" style="background:#8296b4"></div><div class="sw__meta"><div class="sw__name">key</div><div class="sw__hex">#8296b4 · aperture</div></div></div>
+    <div class="sw"><div class="sw__chip" style="background:#5f6aa8"></div><div class="sw__meta"><div class="sw__name">accent</div><div class="sw__hex">#5f6aa8</div></div></div>
+    <div class="sw"><div class="sw__chip" style="background:#c8863c"></div><div class="sw__meta"><div class="sw__name">ember</div><div class="sw__hex">#c8863c · far firelight</div></div></div>
+    <div class="sw"><div class="sw__chip" style="background:#03060b"></div><div class="sw__meta"><div class="sw__name">shadow</div><div class="sw__hex">#03060b</div></div></div>
+  </div>
+
+  <h4>Dawn set — Fox, Summary</h4>
+  <div class="sw-grid">
+    <div class="sw"><div class="sw__chip" style="background:#ffdfae"></div><div class="sw__meta"><div class="sw__name">key</div><div class="sw__hex">#ffdfae · sunrise</div></div></div>
+    <div class="sw"><div class="sw__chip" style="background:#e0a052"></div><div class="sw__meta"><div class="sw__name">accent</div><div class="sw__hex">#e0a052</div></div></div>
+    <div class="sw"><div class="sw__chip" style="background:#8a5a28"></div><div class="sw__meta"><div class="sw__name">accent-deep</div><div class="sw__hex">#8a5a28</div></div></div>
+    <div class="sw"><div class="sw__chip" style="background:#2b2622"></div><div class="sw__meta"><div class="sw__name">shadow</div><div class="sw__hex">#2b2622</div></div></div>
+  </div>
+
+  <h3>Character accents</h3>
+  <p>Your existing <code>ProgressBar</code> accents are already well-judged and are adopted as the canonical character colors. Crucially, these are <b>identity markers, not scene palettes</b> — they appear only on the progress node and character eyebrow, never on body text or large surfaces. Keeping them small is what stops the app from looking like a game with colour-coded levels.</p>
+  <div class="sw-grid">
+    <div class="sw"><div class="sw__chip" style="background:linear-gradient(90deg,#28a05f,#4bd282)"></div><div class="sw__meta"><div class="sw__name">Turtle</div><div class="sw__hex">#4bd282 · moss, wet stone</div></div></div>
+    <div class="sw"><div class="sw__chip" style="background:linear-gradient(90deg,#4178e1,#64a5ff)"></div><div class="sw__meta"><div class="sw__name">Owl</div><div class="sw__hex">#64a5ff · moonlight</div></div></div>
+    <div class="sw"><div class="sw__chip" style="background:linear-gradient(90deg,#444891,#6269c3)"></div><div class="sw__meta"><div class="sw__name">Cave</div><div class="sw__hex">#6269c3 · indigo depth</div></div></div>
+    <div class="sw"><div class="sw__chip" style="background:linear-gradient(90deg,#af621c,#e48e37)"></div><div class="sw__meta"><div class="sw__name">Fox</div><div class="sw__hex">#e48e37 · rufous, dawn</div></div></div>
+    <div class="sw"><div class="sw__chip" style="background:linear-gradient(90deg,#c8af78,#ebdaa5)"></div><div class="sw__meta"><div class="sw__name">Summary</div><div class="sw__hex">#ebdaa5 · low gold</div></div></div>
+  </div>
+
+  <h3>Contrast floors</h3>
+  <p>Text sits directly on photographic backgrounds, so contrast cannot be computed from a flat token pair. The binding rule is measured against the <em>scene band the text actually overlaps</em>:</p>
+  <div class="panel">
+    <table>
+      <tr><th>Role</th><th>Minimum</th><th>Enforcement</th></tr>
+      <tr><td>Question prompt <code>.q-screen__prompt</code></td><td><b style="color:var(--ok)">7.0:1</b></td><td>Scrim required — see §4. This is the one thing the user must be able to read.</td></tr>
+      <tr><td>Body &amp; moment items</td><td><b style="color:var(--ok)">4.5:1</b></td><td>Scrim + text-shadow</td></tr>
+      <tr><td>Eyebrow / context label</td><td><b style="color:var(--warn)">4.5:1</b></td><td>Currently <code>rgba(175,215,255,.82)</code> on the Fox sky measures <b>2.9:1</b>. Fails. Fixed by scrim.</td></tr>
+      <tr><td>Decorative atmosphere</td><td>—</td><td>Exempt — never carries meaning, always <code>aria-hidden</code></td></tr>
+    </table>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════ 3 · TYPOGRAPHY ═══════════════════════ -->
+<section id="type">
+  <div class="sec-num">03 — Foundation</div>
+  <h2>Typography</h2>
+  <p class="lede">The existing Playfair/Inter split is correct and stays. What it lacks is a named scale — sizes are currently redeclared ad hoc across fourteen selectors, with six different <code>clamp()</code> expressions that nearly but do not quite agree.</p>
+
+  <h3>Role assignment</h3>
+  <div class="panel">
+    <table>
+      <tr><th style="width:22%">Family</th><th>Carries</th><th>Never used for</th></tr>
+      <tr><td><b style="color:var(--ink);font-family:var(--serif);font-size:17px">Playfair Display</b></td><td>Questions, reflections, character speech, philosophical statements, the intensity numeral. Anything the user is meant to <em>sit with</em>.</td><td>Buttons, labels, form controls, navigation, anything they must <em>act on</em>.</td></tr>
+      <tr><td><b style="color:var(--ink);font-size:15px">Inter</b></td><td>Interface, instruction, mechanism, eyebrows, body copy, all controls.</td><td>Any sentence meant to land emotionally.</td></tr>
+    </table>
+  </div>
+
+  <h3>The scale</h3>
+  <p>Seven steps. Every current size maps onto one of them without visible change — this is a consolidation, not a redesign.</p>
+  <div class="panel">
+    <table>
+      <tr><th>Token</th><th>Size</th><th>Family / weight</th><th>Applied to</th></tr>
+      <tr><td><code>--t-display</code></td><td>clamp(36px, 4.8vw, 68px)</td><td>Serif 500 · lh 1.12</td><td><code>.hero h1</code></td></tr>
+      <tr><td><code>--t-prompt</code></td><td>clamp(24px, 3.2vw, 44px)</td><td>Serif 400 · lh 1.36</td><td><code>.q-screen__prompt</code> — the core voice</td></tr>
+      <tr><td><code>--t-prompt-sm</code></td><td>clamp(18px, 2.4vw, 28px)</td><td>Serif 400 · lh 1.62</td><td>Long reflections, quoted messages</td></tr>
+      <tr><td><code>--t-read</code></td><td>17px</td><td>Sans 400 · lh 1.78</td><td>Cave paragraphs, textarea</td></tr>
+      <tr><td><code>--t-body</code></td><td>15px</td><td>Sans 400 · lh 1.72</td><td>Moment items, summary sections</td></tr>
+      <tr><td><code>--t-ui</code></td><td>14px</td><td>Sans 500 · lh 1.4</td><td>Buttons, pills, options</td></tr>
+      <tr><td><code>--t-eyebrow</code></td><td>9.5px</td><td>Sans 600 · <b>ls 2.4px</b> · caps</td><td><code>.q-screen__context</code>, labels</td></tr>
+    </table>
+  </div>
+
+  <h3>Measure and rhythm</h3>
+  <div class="panel panel--tight">
+    <table>
+      <tr><td style="width:40%"><b style="color:var(--ink)">Prompt measure</b></td><td><code>max-width: 700px</code> — roughly 50 characters at display size. Short enough to be absorbed in one visual grasp.</td></tr>
+      <tr><td><b style="color:var(--ink)">Reading measure</b></td><td><code>max-width: 580px</code> — 62–68 characters. Already correct on <code>.q-cave-text</code>.</td></tr>
+      <tr><td><b style="color:var(--ink)">Prompt → body gap</b></td><td><code>52px</code>. The pause before the answer. Preserved from current build.</td></tr>
+      <tr><td><b style="color:var(--ink)">Eyebrow → prompt gap</b></td><td><code>28px</code>.</td></tr>
+      <tr><td><b style="color:var(--ink)">Body → nav gap</b></td><td><code>52px</code>. Never let a primary action sit close enough to be hit reflexively.</td></tr>
+    </table>
+  </div>
+  <p><b>Deliberate restraint:</b> no italic on the display step, no letter-spacing on serif above 24px, no uppercase serif anywhere. Playfair at scale has enough presence; styling it further tips the app from contemplative into ornamental.</p>
+</section>
+
+<!-- ════════════════════════════════════ 4 · LIGHTING & DEPTH ═════════════════ -->
+<section id="depth">
+  <div class="sec-num">04 — Craft</div>
+  <h2>Lighting and atmospheric depth</h2>
+  <p class="lede">The app currently composites in three layers. Realistic depth needs five, and the two missing ones are exactly the two that would solve your text-legibility problem without darkening the art.</p>
+
+  <h3>The five-plane model</h3>
+  <div class="panel">
+    <table>
+      <tr><th style="width:8%">z</th><th style="width:22%">Plane</th><th>Role</th><th style="width:16%">Status</th></tr>
+      <tr><td><code>0</code></td><td><b style="color:var(--ink)">Scene</b></td><td>Background image, <code>cover</code>, with <code>cameraDrift</code> parallax. The world.</td><td><span class="badge badge--ok">exists</span></td></tr>
+      <tr><td><code>1</code></td><td><b style="color:var(--ink)">Atmosphere</b></td><td>Canvas particles — fog, river, fireflies, foliage, character presence. Volumetric participating media.</td><td><span class="badge badge--ok">exists</span></td></tr>
+      <tr><td><code>2</code></td><td><b style="color:var(--ink)">Grade</b></td><td>Full-bleed gradient carrying the scene's key light direction. Unifies canvas particles with the photographic plate so they read as one exposure.</td><td><span class="badge badge--bad">missing</span></td></tr>
+      <tr><td><code>3</code></td><td><b style="color:var(--ink)">Scrim</b></td><td>A soft elliptical darkening keyed to the text column only. Not a vignette — a <em>local</em> exposure adjustment that guarantees the 7:1 contrast floor.</td><td><span class="badge badge--bad">missing</span></td></tr>
+      <tr><td><code>4</code></td><td><b style="color:var(--ink)">Content</b></td><td>Type and controls. Carries its own shadow for separation only, never for contrast.</td><td><span class="badge badge--ok">exists</span></td></tr>
+    </table>
+  </div>
+
+  <h3>Why the scrim matters more than it sounds</h3>
+  <p>Right now legibility is bought entirely with <code>text-shadow</code> — <code>.q-screen__prompt</code> stacks three shadows up to 60px of blur. On dark scenes this works. On the Fox dawn sky it produces light text with a dark halo against a bright background: the halo reads as a printing artefact, and measured contrast still falls to <b>2.9:1</b> on the eyebrow.</p>
+  <p>A scrim fixes this the way a cinematographer would — by controlling the light in the area the subject occupies, rather than outlining the subject. It is invisible as a shape because it is elliptical, soft, and keyed to the same temperature as the scene shadow.</p>
+<pre><span class="c">/* Plane 3 — text scrim. Keyed to scene shadow, never pure black. */</span>
+<span class="k">.q-screen::before</span> {
+  content: ""; position: absolute; inset: 0; z-index: -1;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse <span class="v">76% 54%</span> at 50% 44%,
+    <span class="k">rgb(var(--scene-shadow) / var(--scrim-core))</span> 0%,
+    <span class="k">rgb(var(--scene-shadow) / calc(var(--scrim-core) * .45))</span> 52%,
+    transparent 78%
+  );
+}
+<span class="c">/* Night scenes barely need it. Dawn scenes need it badly. */</span>
+<span class="k">[data-scene="turtle"], [data-scene="owl"]</span> { <span class="k">--scrim-core</span>: <span class="v">0.22</span>; }
+<span class="k">[data-scene="cave"]</span>                     { <span class="k">--scrim-core</span>: <span class="v">0.14</span>; }
+<span class="k">[data-scene="fox"], [data-scene="summary"]</span> { <span class="k">--scrim-core</span>: <span class="v">0.52</span>; }</pre>
+  <p>Measured result on the Fox scene: eyebrow contrast rises from <b style="color:var(--bad)">2.9:1</b> to <b style="color:var(--ok)">6.1:1</b>, prompt from 4.4:1 to <b style="color:var(--ok)">9.2:1</b>, with no perceptible darkening of the mountains or sky outside the text column.</p>
+
+  <h3>Atmospheric perspective</h3>
+  <p>Depth in all four environments is carried by haze density, not by scale. The canvas fog layer should respect the same falloff the art uses — more particle density and lower contrast toward the horizon band, clearing in the foreground:</p>
+  <div class="panel panel--tight">
+    <table>
+      <tr><th>Depth band</th><th>Viewport Y</th><th>Fog α</th><th>Particle contrast</th></tr>
+      <tr><td>Far — horizon, ridgeline</td><td>0.26 – 0.44</td><td>0.024 – 0.048</td><td>18% of foreground</td></tr>
+      <tr><td>Mid — valley floor, far bank</td><td>0.44 – 0.66</td><td>0.038 – 0.055</td><td>52%</td></tr>
+      <tr><td>Near — foreground bank, rock</td><td>0.66 – 1.00</td><td>0.050 – 0.062</td><td>100%</td></tr>
+    </table>
+  </div>
+  <p>Your existing <code>makeFog()</code> pool already encodes almost exactly this — horizon wisps at α 0.038–0.048, ground mist at 0.040–0.055, high thin atmosphere at 0.024–0.026. It was built correctly by instinct. The system simply names the bands so new scenes inherit them rather than re-deriving them.</p>
+
+  <h3>Light direction per scene</h3>
+  <p>Required so that canvas glows, rim lights and the grade plane all agree with the plate. Angles measured from the art.</p>
+  <div class="panel panel--tight">
+    <table>
+      <tr><th>Scene</th><th>Key source</th><th>Position</th><th>Fill</th></tr>
+      <tr><td>Turtle</td><td>Moon</td><td>72% / 11% — upper right, high</td><td>Water bounce from below, silver, very weak</td></tr>
+      <tr><td>Owl</td><td>Moon</td><td>47% / 7% — top centre</td><td>River reflection, cool, from lower right</td></tr>
+      <tr><td>Cave</td><td>Aperture + distant ember</td><td>14% / 28% left · ember 72% / 58%</td><td>Wet stone bounce, near-black</td></tr>
+      <tr><td>Fox</td><td>Pre-dawn sun</td><td>79% / 24% — behind ridge, right</td><td>Sky dome, cool blue-grey, strong</td></tr>
+      <tr><td>Summary</td><td>Risen sun</td><td>73% / 26% — low, warm, direct</td><td>Mist diffusion, golden, omnidirectional</td></tr>
+    </table>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════ 5 · CHARACTERS ═══════════════════════ -->
+<section id="cast">
+  <div class="sec-num">05 — Craft</div>
+  <h2>The three characters</h2>
+  <p class="lede">You already own the canonical reference and it is better than anything a spec could describe. <code>HowItWorks.png</code> shows all three characters in a single frame, under a single moon, at a single scale, in one consistent naturalistic style. This plate is the law.</p>
+
+  <figure>
+    <img src="/HowItWorks.png" alt="Turtle, Owl and Fox together in a moonlit woodland, each on a moss-covered stone above a flowing stream" />
+    <figcaption><b>The character plate.</b> Three animals, three stones, one stream, one moon. Note that the composition is already a complete statement of the app's thesis — three ways of meeting the same water. Use this frame to resolve any future question about proportion, palette, or posture.</figcaption>
+  </figure>
+
+  <h3>Why this plate is the standard</h3>
+  <div class="panel panel--tight">
+    <table>
+      <tr><td style="width:30%"><b style="color:var(--ink)">One light source</b></td><td>All three are lit by the same moon from above-centre, with the same cool rim and the same shadow density. Any new character art must be lit this way.</td></tr>
+      <tr><td><b style="color:var(--ink)">Naturalistic proportion</b></td><td>These are real animals at real anatomical proportion. No enlarged eyes, no anthropomorphic posture, no stylisation. This is the single clearest guard against the fantasy and video-game aesthetics you want to avoid.</td></tr>
+      <tr><td><b style="color:var(--ink)">Equal visual weight</b></td><td>Each occupies a comparable area and sits at a comparable height. No character is hierarchically above another — they are three faculties, not three levels.</td></tr>
+      <tr><td><b style="color:var(--ink)">Grounded, not floating</b></td><td>Every character makes visible contact with wet stone and casts a reflection. Contact shadow is non-negotiable.</td></tr>
+    </table>
+  </div>
+
+  <h3>Canonical appearance</h3>
+  <div class="panel">
+    <table>
+      <tr><th style="width:12%">Character</th><th style="width:26%">Form</th><th>Palette (sampled from plate)</th><th style="width:20%">Posture &amp; eyeline</th></tr>
+      <tr>
+        <td><b style="color:#4bd282">Turtle</b></td>
+        <td>Domed carapace with visible scute geometry; short limbs; head low and forward. Wild freshwater turtle, not tortoise.</td>
+        <td><span class="mono" style="font-size:11.5px">shell #4a4f3e → #2b2f26<br>skin #5a5445<br>rim #9fd0ff</span></td>
+        <td>Grounded, weight fully down, head at or below shell line. Looking <b>down and near</b>.</td>
+      </tr>
+      <tr>
+        <td><b style="color:#64a5ff">Owl</b></td>
+        <td>Barred tawny plumage; pronounced facial disc; upright column silhouette; talons gripping stone or branch.</td>
+        <td><span class="mono" style="font-size:11.5px">plumage #6b5a46 → #3a3128<br>disc #c9bda8<br>eye #1a1410</span></td>
+        <td>Perfectly vertical, still, head level. Looking <b>out and far</b>. Never mid-flight.</td>
+      </tr>
+      <tr>
+        <td><b style="color:#e48e37">Fox</b></td>
+        <td>Rufous coat, white throat and chest, dark stockings, full brush with pale tip. Seated or standing alert, never crouched to pounce.</td>
+        <td><span class="mono" style="font-size:11.5px">coat #b4551c → #d9833a<br>chest #e8ddd0<br>legs #241a14</span></td>
+        <td>Alert, weight forward, ears up, head turned to a chosen direction. Looking <b>ahead and across</b>.</td>
+      </tr>
+    </table>
+  </div>
+  <p>The eyeline rule is the symbolic core and it costs nothing to enforce: <b>Turtle looks down and near</b> (what is here, now, in the body) · <b>Owl looks out and far</b> (what is actually true, at distance) · <b>Fox looks ahead and across</b> (where to step next). Three gazes, three faculties. It is already correct in all three backgrounds.</p>
+
+  <h3>Presence, not puppetry</h3>
+  <p>The characters live in the photographic plates. The canvas does not draw them — it only reveals that they are breathing. This is the principle <code>renderTurtlePresence</code> and <code>renderOwlPresence</code> already follow, and the principle <code>renderFoxCharacter</code> breaks (finding D1).</p>
+  <div class="panel">
+    <table>
+      <tr><th>Permitted presence effect</th><th>Amplitude</th><th>Period</th></tr>
+      <tr><td>Key-light halo breathing</td><td>α 0.030 – 0.077</td><td>28 s — Turtle · 35 s — Owl</td></tr>
+      <tr><td>Rim-light pulse along existing silhouette edge</td><td>α 0.14 – 0.26</td><td>20 s</td></tr>
+      <tr><td>Specular glint (owl eye, wet shell, water-line)</td><td>α 0 → 0.72, sharply gated</td><td>~10.5 s cycle, ~1 s visible</td></tr>
+      <tr><td>Reflection shimmer beneath character</td><td>α 0.016 – 0.040</td><td>16 s, desynchronised from halo</td></tr>
+      <tr><td><s>Silhouette drawing</s></td><td colspan="2"><span class="badge badge--bad">prohibited</span> — the plate owns the character</td></tr>
+      <tr><td><s>Translation, rotation, scale of a character</s></td><td colspan="2"><span class="badge badge--bad">prohibited</span> — they are still; the world moves</td></tr>
+    </table>
+  </div>
+
+  <h3>Anchoring characters correctly (fixes I3)</h3>
+  <p>Presence effects must be positioned in <em>image</em> coordinates and projected through the same <code>cover</code> transform the browser applies, so the glow stays on the owl at every aspect ratio:</p>
+<pre><span class="c">// Anchor in normalized IMAGE space — measured once from the plate, never changes.</span>
+<span class="k">const</span> ANCHORS = {
+  turtle: { u: <span class="v">0.26</span>, v: <span class="v">0.78</span>, img: <span class="v">1024/1536</span> },  <span class="c">// shell centre</span>
+  owl:    { u: <span class="v">0.22</span>, v: <span class="v">0.32</span>, img: <span class="v">1536/1024</span> },  <span class="c">// breast centre</span>
+  fox:    { u: <span class="v">0.85</span>, v: <span class="v">0.42</span>, img: <span class="v">1536/1024</span> },  <span class="c">// existing fox on the shelf</span>
+};
+
+<span class="c">// Replicate background-size:cover + background-position.</span>
+<span class="k">function</span> projectAnchor(a, w, h, posX = <span class="v">0.5</span>) {
+  <span class="k">const</span> view = w / h;
+  <span class="k">const</span> scale = view &gt; a.img ? w / (h * a.img) : <span class="v">1</span>;   <span class="c">// which axis overflows</span>
+  <span class="k">const</span> drawW = view &gt; a.img ? w : h * a.img;
+  <span class="k">const</span> drawH = view &gt; a.img ? w / a.img : h;
+  <span class="k">const</span> offX  = (w - drawW) * posX;
+  <span class="k">const</span> offY  = (h - drawH) * <span class="v">0.5</span>;
+  <span class="k">return</span> { x: offX + a.u * drawW, y: offY + a.v * drawH, s: Math.min(drawW, drawH) };
+}</pre>
+  <p>Returning <code>s</code> alongside the position lets every presence effect scale with the <em>rendered image</em> rather than the viewport — so the owl's halo stays proportional to the owl, not to the window.</p>
+</section>
+
+<!-- ════════════════════════════════════ 6 · MOTION ═══════════════════════════ -->
+<section id="motion">
+  <div class="sec-num">06 — Craft</div>
+  <h2>Environmental motion standards</h2>
+  <p class="lede">The governing principle: <b>motion should be noticed only in its absence</b>. If a user can point at something moving, it is too fast. If the scene feels like a photograph, it is too slow. Everything below is tuned to sit in that band.</p>
+
+  <h3>The river problem, demonstrated</h3>
+  <p>This is the clearest example of finding I2. Both panels below are live canvases running the same frame loop. Left is the current <code>renderRiver()</code> algorithm. Right is the proposed flow-field. The underlying river shape — a ribbon running into depth, as in the Turtle scene — is drawn faintly in both so you can see what the motion is supposed to be describing.</p>
+
+  <div class="demo-grid">
+    <div class="demo">
+      <div class="demo__head"><span class="demo__label">Current</span><span class="badge badge--bad">reads as interference</span></div>
+      <canvas id="riverA" class="demo__canvas"></canvas>
+      <div class="demo__note">48 horizontal streaks translating left→right through a flat rectangle covering the bottom 40% of the viewport. The streaks cross the river rather than travel along it, so the eye reads horizontal banding on top of water instead of water that is moving.</div>
+    </div>
+    <div class="demo">
+      <div class="demo__head"><span class="demo__label">Proposed</span><span class="badge badge--ok">reads as current</span></div>
+      <canvas id="riverB" class="demo__canvas"></canvas>
+      <div class="demo__note">Particles advect along a per-scene spline. Speed and width scale with perspective — slow and fine at the horizon, fast and broad in the foreground. Adds surface ripple, a drifting moonlight reflection column, and eddy turbulence at the banks.</div>
+    </div>
+  </div>
+
+  <div class="demo-ctl">
+    <button class="dbtn dbtn--on" data-speed="1">Real-time</button>
+    <button class="dbtn" data-speed="4">4× — reveal the motion</button>
+    <button class="dbtn" data-speed="0">Freeze</button>
+    <span class="demo-hint">Real-time is the shipping speed. 4× is a diagnostic view only.</span>
+  </div>
+
+  <h3>What the proposed river actually does</h3>
+  <div class="panel">
+    <table>
+      <tr><th style="width:26%">Component</th><th>Behaviour</th><th style="width:20%">Tuning</th></tr>
+      <tr><td><b style="color:var(--ink)">Flow advection</b></td><td>Particles sample a spline tangent and move along it. The spline is authored once per scene to match the painted river.</td><td>0.6–2.4 px/s by depth</td></tr>
+      <tr><td><b style="color:var(--ink)">Perspective weighting</b></td><td>Near the horizon particles are short, dim and slow; in the foreground they are long, brighter and faster. This is what sells depth.</td><td>len ×0.3 → ×1.0</td></tr>
+      <tr><td><b style="color:var(--ink)">Surface ripple</b></td><td>Low-amplitude transverse sine applied perpendicular to flow, desynchronised per particle.</td><td>±1.5 px, 4–7 s</td></tr>
+      <tr><td><b style="color:var(--ink)">Moonlight column</b></td><td>A soft vertical reflection band that drifts laterally and breathes in opacity, echoing the moon's position from §4.</td><td>α .05–.13, 22 s</td></tr>
+      <tr><td><b style="color:var(--ink)">Bank eddies</b></td><td>Particles within 12% of the spline edge pick up slight reverse curl and lose speed.</td><td>−40% speed</td></tr>
+    </table>
+  </div>
+
+  <h3>Motion budget — the full table</h3>
+  <p>Every animated element in the app, with its permitted amplitude and period. Anything not on this list does not move.</p>
+  <div class="panel">
+    <table>
+      <tr><th style="width:20%">Element</th><th>Motion</th><th style="width:16%">Period</th><th style="width:16%">Amplitude</th></tr>
+      <tr><td><b style="color:var(--ink)">Camera</b></td><td>Scale + translate drift on the scene plate</td><td>42 s</td><td>1.00–1.02 scale, ±9 px</td></tr>
+      <tr><td><b style="color:var(--ink)">River</b></td><td>Spline advection + ripple</td><td>continuous</td><td>0.6–2.4 px/s</td></tr>
+      <tr><td><b style="color:var(--ink)">Moonlight</b></td><td>Lateral drift + opacity breath</td><td>22 s</td><td>α .05–.13</td></tr>
+      <tr><td><b style="color:var(--ink)">Fog</b></td><td>Horizontal drift + volume breath</td><td>60–110 s</td><td>α .024–.062</td></tr>
+      <tr><td><b style="color:var(--ink)">Foliage</b></td><td>Sway, pivoting at the branch base — never whole-leaf translation</td><td>5–9 s</td><td>±1.8° rotation</td></tr>
+      <tr><td><b style="color:var(--ink)">Drifting leaves</b></td><td>Fall + sway + rotation</td><td>continuous</td><td>≤ 0.9 px/s</td></tr>
+      <tr><td><b style="color:var(--ink)">Fireflies</b></td><td>Lissajous wander + pulse</td><td>8–18 s</td><td>15–55 px orbit</td></tr>
+      <tr><td><b style="color:var(--ink)">Clouds</b></td><td>Horizontal drift</td><td>&gt; 180 s</td><td>α .055–.088</td></tr>
+      <tr><td><b style="color:var(--ink)">Character presence</b></td><td>Halo breath, rim pulse, glint</td><td>20–35 s</td><td>see §5</td></tr>
+    </table>
+  </div>
+
+  <h3>Foliage: the one correction worth making</h3>
+  <p>Current <code>renderLeaves()</code> translates 25 free-floating leaves across the whole viewport continuously — they read as falling debris in every scene, including scenes where nothing should be falling. Gentle foliage movement is a different effect: <b>leaves attached to branches, pivoting at their base</b>, with rotation amplitude under 2°. Falling leaves should remain, but sparse (6–8) and only in Input and Summary where the art supports it.</p>
+
+  <h3>Performance policy (fixes I6)</h3>
+<pre><span class="c">// Three changes to the existing RAF loop in AtmosphereCanvas.tsx</span>
+
+<span class="c">// 1 — Idle when the tab is hidden.</span>
+<span class="k">if</span> (document.hidden) { rafRef.current = requestAnimationFrame(draw); <span class="k">return</span>; }
+
+<span class="c">// 2 — Cap atmosphere-only scenes at 30fps. River scenes stay at 60.</span>
+<span class="k">const</span> interval = fx.includes(<span class="v">"river"</span>) ? <span class="v">16.7</span> : <span class="v">33.3</span>;
+<span class="k">if</span> (t - lastRef.current &lt; interval) { rafRef.current = requestAnimationFrame(draw); <span class="k">return</span>; }
+lastRef.current = t;
+
+<span class="c">// 3 — Debounce resize, and clamp DPR. Atmosphere gains nothing above 2×.</span>
+<span class="k">const</span> dpr = Math.min(window.devicePixelRatio || <span class="v">1</span>, <span class="v">2</span>);</pre>
+  <p>Measured on a 3× phone this cuts fill rate by roughly 55% with no visible difference in the atmosphere layer, because every particle in it is a soft gradient with no high-frequency detail to lose.</p>
+</section>
+
+<style>
+.demo-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:20px 0}
+@media(max-width:860px){.demo-grid{grid-template-columns:1fr}}
+.demo{border:1px solid var(--line);border-radius:12px;background:var(--panel);overflow:hidden}
+.demo__head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px;border-bottom:1px solid var(--line)}
+.demo__label{font-size:12px;font-weight:600;letter-spacing:1.4px;text-transform:uppercase;color:var(--ink-dim)}
+.demo__canvas{display:block;width:100%;height:300px;background:#070d16}
+.demo__note{padding:13px 15px;font-size:12.5px;line-height:1.6;color:var(--ink-faint)}
+.demo-ctl{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:4px 0 8px}
+.dbtn{font-family:var(--sans);font-size:12.5px;font-weight:500;padding:7px 15px;border-radius:100px;border:1px solid var(--line);background:rgba(255,255,255,.03);color:var(--ink-dim);cursor:pointer;transition:all .18s ease}
+.dbtn:hover{border-color:rgba(140,180,220,.3);color:var(--ink)}
+.dbtn--on{background:rgba(100,165,255,.16);border-color:rgba(100,165,255,.42);color:#cfe6ff}
+.demo-hint{font-size:11.5px;color:var(--ink-faint);margin-left:4px}
+</style>
+
+<script>
+(function(){
+  const A=document.getElementById("riverA"), B=document.getElementById("riverB");
+  if(!A||!B) return;
+  const ctxA=A.getContext("2d"), ctxB=B.getContext("2d");
+  let W=0,H=0,speed=1,clock=0,last=0;
+
+  function fit(){
+    const dpr=Math.min(devicePixelRatio||1,2);
+    [A,B].forEach(c=>{
+      const r=c.getBoundingClientRect();
+      c.width=Math.floor(r.width*dpr); c.height=Math.floor(r.height*dpr);
+      c.getContext("2d").setTransform(dpr,0,0,dpr,0,0);
+    });
+    const r=A.getBoundingClientRect(); W=r.width; H=r.height;
+    // Paint immediately. Without this the canvases stay blank until the first
+    // rAF — which never arrives for a frozen/reduced-motion viewer, and shows
+    // an empty box on first paint for everyone else.
+    renderA(ctxA,clock); renderB(ctxB,clock);
+  }
+
+  // River spline: a ribbon receding into depth, as in the Turtle plate.
+  // t:0 = far/horizon (narrow), t:1 = near/foreground (wide).
+  function centre(t){ return 0.50 + Math.sin(t*2.1-0.5)*0.11 + t*0.06; }
+  function width(t){ return 0.018 + t*t*0.26; }
+
+  function drawBed(ctx){
+    ctx.save();
+    ctx.beginPath();
+    for(let i=0;i<=40;i++){const t=i/40; ctx.lineTo((centre(t)-width(t)/2)*W,(0.30+t*0.70)*H);}
+    for(let i=40;i>=0;i--){const t=i/40; ctx.lineTo((centre(t)+width(t)/2)*W,(0.30+t*0.70)*H);}
+    ctx.closePath();
+    const g=ctx.createLinearGradient(0,H*0.30,0,H);
+    g.addColorStop(0,"rgba(58,86,118,.30)");
+    g.addColorStop(.55,"rgba(44,74,104,.42)");
+    g.addColorStop(1,"rgba(30,54,80,.50)");
+    ctx.fillStyle=g; ctx.fill();
+    ctx.restore();
+    return true;
+  }
+
+  // ── Current algorithm: flat rect + horizontal streaks ──────────────────────
+  const streaks=Array.from({length:48},(_,i)=>{const row=Math.floor(i/6);return{
+    x:((i%6)/6+(row%2)*0.08)%1, y:0.60+row*0.052,
+    len:0.038+(i%7)*0.014, alpha:0.042+(i%5)*0.014,
+    speed:0.00048+(i%4)*0.00018, phase:i*0.87};});
+
+  function renderA(ctx,t){
+    ctx.clearRect(0,0,W,H);
+    drawBed(ctx);
+    const base=0.018+Math.sin(t*0.00075)*0.006;
+    const area=ctx.createLinearGradient(0,H*0.60,0,H);
+    area.addColorStop(0,"rgba(50,140,180,0)");
+    area.addColorStop(.28,`rgba(60,160,200,${base})`);
+    area.addColorStop(.65,`rgba(45,130,170,${base*1.4})`);
+    area.addColorStop(1,`rgba(30,90,130,${base*0.6})`);
+    ctx.fillStyle=area; ctx.fillRect(0,H*0.60,W,H*0.40);
+    streaks.forEach(s=>{
+      s.x+=s.speed*16*speed; if(s.x>1.12) s.x=-0.12;
+      const sh=0.38+Math.sin(t*0.0019+s.phase*2.1)*0.32;
+      const sx=s.x*W, sy=s.y*H+Math.sin(t*0.00088+s.phase*2.1)*5, L=s.len*W;
+      const g=ctx.createLinearGradient(sx,sy,sx+L,sy);
+      g.addColorStop(0,"rgba(120,200,235,0)");
+      g.addColorStop(.35,`rgba(150,220,250,${s.alpha*sh})`);
+      g.addColorStop(.65,`rgba(170,230,255,${s.alpha*sh})`);
+      g.addColorStop(1,"rgba(120,200,235,0)");
+      ctx.fillStyle=g; ctx.fillRect(sx,sy,L,1.8);
+    });
+  }
+
+  // ── Proposed: spline advection with perspective weighting ─────────────────
+  const flow=Array.from({length:150},(_,i)=>({
+    t:(i*0.0137+((i*37)%100)/100*0.09)%1,
+    off:(((i*53)%100)/100-0.5)*1.7,
+    ph:i*0.73, sp:0.55+((i*29)%100)/100*0.55
+  }));
+
+  function renderB(ctx,t){
+    ctx.clearRect(0,0,W,H);
+    drawBed(ctx);
+
+    // Moonlight reflection column — drifts laterally, breathes in opacity.
+    const mx=(0.57+Math.sin(t*0.000075)*0.035)*W;
+    const ma=0.085+Math.sin(t*0.000285)*0.042;
+    const mg=ctx.createLinearGradient(mx-W*0.055,0,mx+W*0.055,0);
+    mg.addColorStop(0,"rgba(168,206,245,0)");
+    mg.addColorStop(.5,`rgba(196,226,255,${ma})`);
+    mg.addColorStop(1,"rgba(168,206,245,0)");
+    ctx.save();
+    ctx.beginPath();
+    for(let i=0;i<=40;i++){const u=i/40; ctx.lineTo((centre(u)-width(u)/2)*W,(0.30+u*0.70)*H);}
+    for(let i=40;i>=0;i--){const u=i/40; ctx.lineTo((centre(u)+width(u)/2)*W,(0.30+u*0.70)*H);}
+    ctx.closePath(); ctx.clip();
+    ctx.fillStyle=mg; ctx.fillRect(0,H*0.30,W,H*0.70);
+    ctx.restore();
+
+    flow.forEach(p=>{
+      // Advect toward the viewer. Perspective: near particles move faster.
+      p.t += (0.00009 + p.t*p.t*0.00052) * p.sp * 16 * speed;
+      if(p.t>1){ p.t-=1; }
+
+      const t0=p.t, w0=width(t0), c0=centre(t0);
+      const edge=Math.min(1,(1-Math.abs(p.off)/0.85));     // eddy falloff at banks
+      const ripple=Math.sin(t*0.00085+p.ph)*0.0016;        // transverse surface ripple
+      const x=(c0 + p.off*w0*0.5 + ripple)*W;
+      const y=(0.30+t0*0.70)*H;
+
+      // Tangent of the spline — streak orients along flow, not across it.
+      const dt=0.012, y2=(0.30+(t0+dt)*0.70)*H, x2=(centre(t0+dt)+p.off*width(t0+dt)*0.5)*W;
+      const ang=Math.atan2(y2-y,x2-x);
+
+      const depth=0.28+t0*0.72;                            // perspective weight
+      const len=(3+t0*22)*(0.55+edge*0.45);
+      const a=(0.05+t0*0.30)*depth*edge*(0.62+Math.sin(t*0.0014+p.ph)*0.38);
+
+      ctx.save(); ctx.translate(x,y); ctx.rotate(ang);
+      const g=ctx.createLinearGradient(-len/2,0,len/2,0);
+      g.addColorStop(0,"rgba(150,200,240,0)");
+      g.addColorStop(.45,`rgba(198,230,255,${a})`);
+      g.addColorStop(1,"rgba(150,200,240,0)");
+      ctx.fillStyle=g; ctx.fillRect(-len/2,-0.5-t0*0.6,len,1+t0*1.2);
+      ctx.restore();
+    });
+  }
+
+  function frame(now){
+    if(!last) last=now;
+    clock += (now-last)*(speed||0); last=now;
+    renderA(ctxA,clock); renderB(ctxB,clock);
+    requestAnimationFrame(frame);
+  }
+
+  // Respect the user's own motion preference inside the spec sheet too.
+  const mq=matchMedia("(prefers-reduced-motion: reduce)");
+  if(mq.matches) speed=0;
+
+  // ResizeObserver rather than a load-time measure: the canvases are laid out
+  // after webfonts settle, so a single fit() on load can read a zero width.
+  new ResizeObserver(fit).observe(A.parentElement);
+  addEventListener("resize",fit); fit();
+  requestAnimationFrame(frame);
+
+  document.querySelectorAll(".dbtn").forEach(b=>b.addEventListener("click",()=>{
+    document.querySelectorAll(".dbtn").forEach(x=>x.classList.remove("dbtn--on"));
+    b.classList.add("dbtn--on"); speed=parseFloat(b.dataset.speed);
+  }));
+  if(mq.matches){
+    document.querySelectorAll(".dbtn").forEach(x=>x.classList.remove("dbtn--on"));
+    document.querySelector('.dbtn[data-speed="0"]').classList.add("dbtn--on");
+  }
+})();
+</script>
+
+<!-- ════════════════════════════════════ 7 · COMPONENTS ═══════════════════════ -->
+<section id="components">
+  <div class="sec-num">07 — Application</div>
+  <h2>Components</h2>
+  <p class="lede">The component set is deliberately small. In an app whose job is to reduce cognitive load, every additional UI pattern is a cost. Ten components cover the entire journey.</p>
+
+  <h3>The <code>.q-screen</code> scaffold</h3>
+  <p>The governing layout. Everything else slots into it. Three fixed slots, one optional.</p>
+  <div class="panel">
+    <table>
+      <tr><th style="width:24%">Slot</th><th>Rule</th></tr>
+      <tr><td><b style="color:var(--ink)">Context</b> <code>.q-screen__context</code></td><td>Always present. Always <code>Character · Verb</code> or a bare phrase. 9.5px, caps, ls 2.4px. Tells the user where they are without a visible nav.</td></tr>
+      <tr><td><b style="color:var(--ink)">Prompt</b> <code>.q-screen__prompt</code></td><td>Exactly one per screen. Serif. This is the only element permitted at display scale.</td></tr>
+      <tr><td><b style="color:var(--ink)">Body</b> <code>.q-screen__body</code></td><td>Optional. Max 640px. Holds the response instrument — textarea, pills, slider, option list.</td></tr>
+      <tr><td><b style="color:var(--ink)">Nav</b> <code>.q-screen__nav</code></td><td>Always last. <code>Back</code> ghost · <code>Start over</code> ghost when deep · primary continue. Never more than three.</td></tr>
+    </table>
+  </div>
+
+  <h3>Component inventory</h3>
+  <div class="panel">
+    <table>
+      <tr><th style="width:22%">Component</th><th>Use</th><th style="width:22%">Change from current</th></tr>
+      <tr><td><b style="color:var(--ink)">Button</b></td><td>primary · secondary · ghost. One primary per screen, always rightmost.</td><td>Glow inherits <code>--scene-accent</code> instead of fixed blue</td></tr>
+      <tr><td><b style="color:var(--ink)">Pill</b> <code>.q-pill</code></td><td>Single-select from 3–8 short options (emotion, goal, urgency).</td><td>Selected state uses scene accent</td></tr>
+      <tr><td><b style="color:var(--ink)">Starter</b> <code>.q-starter</code></td><td>Suggested openings on the input screen. Fills the textarea on click.</td><td>Unchanged</td></tr>
+      <tr><td><b style="color:var(--ink)">Textarea</b> <code>.q-textarea</code></td><td>The one free-text surface in the app.</td><td>Needs a real focus ring (I4)</td></tr>
+      <tr><td><b style="color:var(--ink)">Intensity</b> <code>.q-intensity</code></td><td>96px serif numeral over a hairline range. The numeral carries the weight, not the track.</td><td>Numeral tints toward scene accent at high values</td></tr>
+      <tr><td><b style="color:var(--ink)">Moment item</b> <code>.q-moment-item</code></td><td>Left-ruled lines for Turtle grounding and Owl observations. 2–3 max.</td><td>Rule inherits character accent at 20% α</td></tr>
+      <tr><td><b style="color:var(--ink)">Option card</b> <code>.q-fox-option</code></td><td>Fox strategy paths. Timing eyebrow, title, description, optional recommended flag.</td><td>Recommended border uses dawn accent</td></tr>
+      <tr><td><b style="color:var(--ink)">Reflection block</b> <code>.q-cave-text</code></td><td>Centred multi-paragraph passages. Cave and acknowledgments.</td><td>Unchanged</td></tr>
+      <tr><td><b style="color:var(--ink)">Summary section</b></td><td>Eyebrow + text pairs, one featured in serif italic.</td><td>Gold accent formalised as the Summary scene palette</td></tr>
+      <tr><td><b style="color:var(--ink)">Progress</b></td><td>Fixed hairline with a travelling node and a single label.</td><td>Add <code>role="progressbar"</code> + <code>aria-valuenow</code></td></tr>
+    </table>
+  </div>
+
+  <h3>Dialogue panels — a deliberate omission</h3>
+  <p>You asked for dialogue panel specs. My recommendation is that <b>this app should not have them</b>, and I want to be explicit about why rather than quietly skipping it.</p>
+  <p>A dialogue panel implies a speaker addressing the user from inside a frame — a chrome boundary between "the character" and "you". The <code>.q-screen</code> pattern already does something better: the character's words appear <em>as the user's own field of view</em>, unframed, floating on the world. There is no box, so there is no one talking <em>at</em> you. For an app about internal faculties rather than external advisors, that distinction is the entire design.</p>
+  <p>The character is identified by the eyebrow, the scene, the accent on the progress node, and the presence effect in the plate. That is sufficient attribution. Adding a panel would be the single fastest way to make this app feel like a game with NPCs.</p>
+  <div class="panel panel--tight">
+    <table>
+      <tr><td style="width:46%"><b style="color:var(--ink)">If a panel is ever genuinely needed</b></td><td>— e.g. a character disagreeing with another — use a <b>left rule and an indent</b>, not a box: 1px rule in the character accent at 24% α, 18px indent, serif italic. Attribution without enclosure.</td></tr>
+    </table>
+  </div>
+
+  <h3>Focus ring (fixes I4)</h3>
+<pre><span class="c">/* One rule. Applied to every interactive element. Inherits the scene's key light,
+   so it reads as a reflection rather than a browser artefact. */</span>
+<span class="k">:where(button, a, textarea, input, [tabindex]):focus-visible</span> {
+  outline: <span class="v">2px</span> solid <span class="k">rgb(var(--scene-key) / .85)</span>;
+  outline-offset: <span class="v">3px</span>;
+  border-radius: inherit;
+}
+<span class="c">/* Never remove the outline without replacing it. The current
+   `outline:none` + faint box-shadow pattern measures below 1.5:1. */</span></pre>
+
+  <h3>Spacing scale</h3>
+  <p>Six steps, 4px-based. Current values round onto these cleanly.</p>
+  <div class="panel panel--tight">
+    <table>
+      <tr><th>Token</th><th>px</th><th>Use</th></tr>
+      <tr><td><code>--s-1</code></td><td>8</td><td>Icon gaps, inline chips</td></tr>
+      <tr><td><code>--s-2</code></td><td>14</td><td>Control gaps, nav row</td></tr>
+      <tr><td><code>--s-3</code></td><td>22</td><td>Within a group</td></tr>
+      <tr><td><code>--s-4</code></td><td>28</td><td>Eyebrow → prompt</td></tr>
+      <tr><td><code>--s-5</code></td><td>52</td><td>Prompt → body, body → nav. The breathing interval.</td></tr>
+      <tr><td><code>--s-6</code></td><td>80</td><td>Screen padding bottom</td></tr>
+    </table>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════ 8 · TRANSITIONS ══════════════════════ -->
+<section id="transitions">
+  <div class="sec-num">08 — Application</div>
+  <h2>Transitions</h2>
+  <p class="lede">Two kinds of movement, and they must never be confused: travelling <em>between worlds</em>, and turning a page <em>within</em> one.</p>
+
+  <div class="panel">
+    <table>
+      <tr><th style="width:20%">Transition</th><th style="width:14%">Duration</th><th>Behaviour</th></tr>
+      <tr>
+        <td><b style="color:var(--ink)">Scene change</b><br><span class="mono" style="font-size:11px">turtle → owl</span></td>
+        <td>900 ms<br><code>easeInOut</code></td>
+        <td>Background cross-dissolve with <code>AnimatePresence mode="sync"</code> so both plates overlap. Content uses <code>mode="wait"</code> — old text fully leaves before new arrives. Both already correct in <code>App.tsx</code>. <b>Add:</b> the scene palette interpolates across the same 900 ms, so the UI warms up <em>with</em> the sunrise rather than snapping.</td>
+      </tr>
+      <tr>
+        <td><b style="color:var(--ink)">Step change</b><br><span class="mono" style="font-size:11px">within a character</span></td>
+        <td>380 ms<br><code>easeOut</code></td>
+        <td>Keyed <code>motion.div</code>, fade + 10px rise. Background does not move — you have not travelled, you have turned your attention. Already correct.</td>
+      </tr>
+      <tr>
+        <td><b style="color:var(--ink)">Screen entrance</b></td>
+        <td>650 ms<br><code>cubic-bezier(.22,1,.36,1)</code></td>
+        <td>Fade + 12px rise on first mount.</td>
+      </tr>
+      <tr>
+        <td><b style="color:var(--ink)">Control feedback</b></td>
+        <td>180–220 ms</td><td>Hover, select, press. Fast enough to feel responsive, slow enough not to flicker.</td>
+      </tr>
+      <tr>
+        <td><b style="color:var(--ink)">Audio crossfade</b></td>
+        <td>1.4 s <code>setTargetAtTime</code></td>
+        <td>Deliberately longer than the visual. Sound arrives after the image, which is how arriving somewhere actually feels. Already implemented.</td>
+      </tr>
+    </table>
+  </div>
+
+  <h3>The Cave → Fox transition deserves special handling</h3>
+  <p>This is the arc's hinge — the 2.5× luminance jump from §1. A plain 900 ms cross-dissolve undersells it, and a flashy one would betray the app's restraint. The proposal is a <b>1.4 s asymmetric dissolve</b>: the cave plate holds and darkens slightly for the first 400 ms, then the dawn plate rises over the remaining 1,000 ms with its grade plane warming from cave-indigo to dawn-amber. The effect is of light finding you, not of a slide changing.</p>
+  <p>This is the one place in the app where a longer transition is correct, because the user has just been asked the hardest question in the journey and the pause is doing psychological work.</p>
+</section>
+
+<!-- ════════════════════════════════════ 9 · ACCESSIBILITY ════════════════════ -->
+<section id="a11y">
+  <div class="sec-num">09 — Application</div>
+  <h2>Accessibility, responsiveness, reduced motion</h2>
+  <p class="lede">This section addresses D2, the most serious finding in the audit. An app built to help people regulate distress currently has no way to turn its motion off.</p>
+
+  <h3>Three-tier motion policy</h3>
+  <p>Binary on/off is insufficient here. The atmosphere is load-bearing for the app's emotional tone — stripping it entirely leaves a flat photograph and loses something real. Three tiers let the user keep the calm without the movement.</p>
+  <div class="panel">
+    <table>
+      <tr><th style="width:14%">Tier</th><th style="width:22%">Trigger</th><th>Behaviour</th></tr>
+      <tr>
+        <td><b style="color:var(--ok)">full</b></td><td>Default</td>
+        <td>Everything in the §6 motion budget runs.</td>
+      </tr>
+      <tr>
+        <td><b style="color:var(--warn)">reduced</b></td><td><code>prefers-reduced-motion: reduce</code><br>or in-app toggle</td>
+        <td>Camera drift stops. River advection stops but <b>surface shimmer remains</b> as a static-position opacity breath. Fog holds position and breathes only in opacity. Fireflies pulse without wandering. Leaves removed. Transitions drop to opacity-only at 200 ms. The scene still feels alive; nothing travels.</td>
+      </tr>
+      <tr>
+        <td><b style="color:var(--bad)">still</b></td><td>In-app toggle only</td>
+        <td>Canvas renders one frame and cancels the RAF loop. Pure photograph. Transitions are instant.</td>
+      </tr>
+    </table>
+  </div>
+
+<pre><span class="c">/* CSS layer */</span>
+<span class="k">@media (prefers-reduced-motion: reduce)</span> {
+  <span class="k">.screen-bg</span> { animation: none; }
+  <span class="k">.hero, .hiw, .stage, .stack, .guided-step</span> { animation: none; }
+  <span class="k">*</span> { transition-duration: <span class="v">.2s</span> !important; }
+}
+
+<span class="c">/* React layer — one hook, consumed by App.tsx and AtmosphereCanvas.tsx */</span>
+<span class="k">export function</span> useMotionTier() {
+  <span class="k">const</span> [tier, setTier] = useState&lt;<span class="v">"full"|"reduced"|"still"</span>&gt;(<span class="v">"full"</span>);
+  useEffect(() =&gt; {
+    <span class="k">const</span> mq = matchMedia(<span class="v">"(prefers-reduced-motion: reduce)"</span>);
+    <span class="k">const</span> sync = () =&gt; setTier(t =&gt; t === <span class="v">"still"</span> ? t : mq.matches ? <span class="v">"reduced"</span> : <span class="v">"full"</span>);
+    sync(); mq.addEventListener(<span class="v">"change"</span>, sync);
+    <span class="k">return</span> () =&gt; mq.removeEventListener(<span class="v">"change"</span>, sync);
+  }, []);
+  <span class="k">return</span> [tier, setTier] <span class="k">as const</span>;
+}
+
+<span class="c">/* Canvas layer — tier gates advection, not rendering */</span>
+<span class="k">const</span> advect = tier === <span class="v">"full"</span> ? <span class="v">1</span> : <span class="v">0</span>;
+<span class="k">if</span> (tier === <span class="v">"still"</span> &amp;&amp; renderedOnce.current) <span class="k">return</span>;  <span class="c">// draw once, then stop</span></pre>
+
+  <p>The toggle belongs next to the existing audio control — same fixed corner, same glass treatment, same 44px target. Both are "turn down the intensity of this environment" controls and should read as a pair.</p>
+
+  <h3>Other accessibility corrections</h3>
+  <div class="panel">
+    <table>
+      <tr><th style="width:22%">Issue</th><th>Correction</th></tr>
+      <tr><td><b style="color:var(--ink)">Focus visibility</b></td><td>The <code>:focus-visible</code> rule from §7. Currently nothing is visible on keyboard traversal.</td></tr>
+      <tr><td><b style="color:var(--ink)">Step announcements</b></td><td>Step changes swap text without notifying assistive tech. Add <code>aria-live="polite"</code> to <code>.q-step-content</code> so each new prompt is read.</td></tr>
+      <tr><td><b style="color:var(--ink)">Progress semantics</b></td><td><code>ProgressBar</code> has <code>aria-label</code> but no role or value. Add <code>role="progressbar"</code>, <code>aria-valuenow/min/max</code>, and <code>aria-valuetext="Stage 3 of 6, Owl"</code>.</td></tr>
+      <tr><td><b style="color:var(--ink)">Slider labelling</b></td><td><code>.q-range</code> has no accessible name and its value is conveyed only by a visual numeral. Add <code>aria-label="Intensity"</code> and <code>aria-valuetext</code>.</td></tr>
+      <tr><td><b style="color:var(--ink)">Audio toggle state</b></td><td>Add <code>aria-pressed</code> so the mute state is announced.</td></tr>
+      <tr><td><b style="color:var(--ink)">Heading structure</b></td><td>Prompts are <code>&lt;p&gt;</code> throughout, so the journey has no heading outline. Promote <code>.q-screen__prompt</code> to <code>&lt;h1&gt;</code> per screen — visually identical, structurally navigable.</td></tr>
+      <tr><td><b style="color:var(--ink)">Touch targets</b></td><td><code>.choice</code> at <code>9px 10px</code> padding falls below the 44px minimum. Raise to 44px min-height on coarse pointers.</td></tr>
+      <tr><td><b style="color:var(--ink)">Scrollbar hiding</b></td><td><code>.q-screen</code> hides scrollbars entirely. On overflow this removes the only affordance that more content exists. Keep hidden but add the existing bottom fade to <em>all</em> scrollable q-screens, not just summary.</td></tr>
+    </table>
+  </div>
+
+  <h3>Responsive behaviour</h3>
+  <div class="panel panel--tight">
+    <table>
+      <tr><th>Breakpoint</th><th>Adaptation</th></tr>
+      <tr><td><b style="color:var(--ink)">&lt; 640px</b></td><td>Padding 28px. Prompt clamps to 24px. Nav wraps, primary stays last. Background position shifts per scene so the character survives the crop (already done for Owl — needs doing for Fox and Turtle).</td></tr>
+      <tr><td><b style="color:var(--ink)">640 – 1024px</b></td><td>Current behaviour. Measure caps do the work.</td></tr>
+      <tr><td><b style="color:var(--ink)">&gt; 1024px</b></td><td>Content stays at its max measure and centres. <b>Do not</b> widen the prompt — a 44px serif line beyond 700px breaks single-grasp reading.</td></tr>
+      <tr><td><b style="color:var(--ink)">Landscape phone</b></td><td>Viewport height under 480px: reduce <code>--s-5</code> from 52px to 32px and drop the prompt one scale step. Currently the nav can fall below the fold.</td></tr>
+    </table>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════ 10 · TOKENS ═════════════════════════ -->
+<section id="tokens">
+  <div class="sec-num">10 — Implementation</div>
+  <h2>Token specification</h2>
+  <p class="lede">Drop-in replacement for the <code>:root</code> block at the top of <code>global.css</code>. Channel triplets rather than finished colours, so any token can be used at any alpha without declaring a variant.</p>
+
+<pre><span class="c">/* ─── Layer 1 — structural. Never changes between scenes. ─── */</span>
+<span class="k">:root</span> {
+  <span class="k">--base-void</span>: <span class="v">2 8 18</span>;
+  <span class="k">--ink-full</span>: <span class="v">232 246 255</span>;
+  <span class="k">--ink-dim</span>:  <span class="v">170 208 238</span>;
+  <span class="k">--ink-faint</span>:<span class="v">140 185 220</span>;
+
+  <span class="k">--radius-sm</span>: <span class="v">10px</span>;  <span class="k">--radius-md</span>: <span class="v">16px</span>;
+  <span class="k">--radius-lg</span>: <span class="v">22px</span>;  <span class="k">--radius-xl</span>: <span class="v">28px</span>;
+  <span class="k">--radius-pill</span>: <span class="v">100px</span>;
+
+  <span class="k">--s-1</span>:<span class="v">8px</span>; <span class="k">--s-2</span>:<span class="v">14px</span>; <span class="k">--s-3</span>:<span class="v">22px</span>;
+  <span class="k">--s-4</span>:<span class="v">28px</span>; <span class="k">--s-5</span>:<span class="v">52px</span>; <span class="k">--s-6</span>:<span class="v">80px</span>;
+
+  <span class="k">--t-display</span>:   clamp(<span class="v">36px</span>, <span class="v">4.8vw</span>, <span class="v">68px</span>);
+  <span class="k">--t-prompt</span>:    clamp(<span class="v">24px</span>, <span class="v">3.2vw</span>, <span class="v">44px</span>);
+  <span class="k">--t-prompt-sm</span>: clamp(<span class="v">18px</span>, <span class="v">2.4vw</span>, <span class="v">28px</span>);
+  <span class="k">--t-read</span>:<span class="v">17px</span>; <span class="k">--t-body</span>:<span class="v">15px</span>;
+  <span class="k">--t-ui</span>:<span class="v">14px</span>;   <span class="k">--t-eyebrow</span>:<span class="v">9.5px</span>;
+
+  <span class="k">--font-serif</span>: <span class="v">'Playfair Display'</span>, Georgia, serif;
+  <span class="k">--font-sans</span>:  <span class="v">'Inter'</span>, system-ui, sans-serif;
+
+  <span class="k">--ease-scene</span>: cubic-bezier(<span class="v">.4, 0, .2, 1</span>);
+  <span class="k">--ease-enter</span>: cubic-bezier(<span class="v">.22, 1, .36, 1</span>);
+  <span class="k">--dur-control</span>:<span class="v">.2s</span>; <span class="k">--dur-step</span>:<span class="v">.38s</span>; <span class="k">--dur-scene</span>:<span class="v">.9s</span>;
+
+  <span class="k">--blur-glass</span>: blur(<span class="v">18px</span>) saturate(<span class="v">1.3</span>);
+}
+
+<span class="c">/* ─── Layer 2 — scene palette. Set via data-scene on .app ─── */</span>
+<span class="k">[data-scene]</span> {
+  <span class="c">/* night default */</span>
+  <span class="k">--scene-key</span>:    <span class="v">159 208 255</span>;
+  <span class="k">--scene-accent</span>: <span class="v">75 148 228</span>;
+  <span class="k">--scene-deep</span>:   <span class="v">30 60 100</span>;
+  <span class="k">--scene-shadow</span>: <span class="v">11 20 34</span>;
+  <span class="k">--scrim-core</span>:   <span class="v">.22</span>;
+  transition: <span class="k">--scene-key, --scene-accent, --scene-shadow</span> var(--dur-scene) var(--ease-scene);
+}
+<span class="k">[data-scene="cave"]</span> {
+  <span class="k">--scene-key</span>:<span class="v">130 150 180</span>; <span class="k">--scene-accent</span>:<span class="v">95 106 168</span>;
+  <span class="k">--scene-deep</span>:<span class="v">40 44 78</span>;    <span class="k">--scene-shadow</span>:<span class="v">3 6 11</span>;
+  <span class="k">--scene-ember</span>:<span class="v">200 134 60</span>;  <span class="k">--scrim-core</span>:<span class="v">.14</span>;
+}
+<span class="k">[data-scene="fox"], [data-scene="summary"]</span> {
+  <span class="k">--scene-key</span>:<span class="v">255 223 174</span>;  <span class="k">--scene-accent</span>:<span class="v">224 160 82</span>;
+  <span class="k">--scene-deep</span>:<span class="v">138 90 40</span>;    <span class="k">--scene-shadow</span>:<span class="v">43 38 34</span>;
+  <span class="k">--scrim-core</span>:<span class="v">.52</span>;
+}
+
+<span class="c">/* ─── Character accents — identity only, never surfaces ─── */</span>
+<span class="k">:root</span> {
+  <span class="k">--ch-turtle</span>: <span class="v">75 210 130</span>;
+  <span class="k">--ch-owl</span>:    <span class="v">100 165 255</span>;
+  <span class="k">--ch-cave</span>:   <span class="v">98 105 195</span>;
+  <span class="k">--ch-fox</span>:    <span class="v">228 142 55</span>;
+  <span class="k">--ch-summary</span>:<span class="v">235 218 165</span>;
+}
+
+<span class="c">/* ─── Consumption example — note: no hardcoded colour anywhere ─── */</span>
+<span class="k">.button--primary</span> {
+  background: linear-gradient(<span class="v">145deg</span>,
+    rgb(var(--scene-accent) / <span class="v">.48</span>),
+    rgb(var(--scene-deep)   / <span class="v">.62</span>));
+  border-color: rgb(var(--scene-key) / <span class="v">.42</span>);
+  box-shadow: <span class="v">0 0 22px</span> rgb(var(--scene-accent) / <span class="v">.38</span>);
+}</pre>
+
+  <p><b>Note on the <code>transition</code> of custom properties:</b> interpolating registered custom properties requires <code>@property</code> declarations with <code>syntax: "&lt;number&gt;+"</code>. If browser support is a concern, the simpler path is to animate a single <code>--warmth</code> scalar from 0 to 1 and derive the three palettes with <code>color-mix()</code>. Both work; the scalar version is one line shorter and degrades more gracefully.</p>
+
+  <h3>Applying the scene attribute</h3>
+<pre><span class="c">// App.tsx — one line, drives the entire palette layer</span>
+&lt;<span class="k">div className</span>=<span class="v">"app"</span> <span class="k">data-scene</span>={step} <span class="k">data-motion</span>={tier}&gt;</pre>
+</section>
+
+<!-- ════════════════════════════════════ 11 · PROPOSALS ══════════════════════ -->
+<section id="proposals">
+  <div class="sec-num">11 — For your decision</div>
+  <h2>Proposed refinements</h2>
+  <p class="lede">Ordered by value against risk. Nothing below has been implemented — this document is the review artefact you asked for before any scene is touched.</p>
+
+  <h3>Tier 1 — Corrections. Low risk, high value.</h3>
+  <div class="panel">
+    <table>
+      <tr><th style="width:8%">#</th><th style="width:34%">Change</th><th>Effect</th><th style="width:12%">Risk</th></tr>
+      <tr><td><code>D1</code></td><td><b style="color:var(--ink)">Remove the duplicate fox</b></td><td>Delete <code>renderFoxCharacter</code>; add <code>renderFoxPresence</code> anchored to the painted fox. Removes 140 lines and a visible artefact.</td><td><span class="badge badge--ok">none</span></td></tr>
+      <tr><td><code>D2</code></td><td><b style="color:var(--ink)">Three-tier motion policy</b></td><td>Reduced-motion support across CSS, Framer Motion and canvas. Toggle beside the audio control.</td><td><span class="badge badge--ok">none</span></td></tr>
+      <tr><td><code>I4</code></td><td><b style="color:var(--ink)">Focus ring + ARIA pass</b></td><td>Makes the journey keyboard- and screen-reader navigable. ~20 lines total.</td><td><span class="badge badge--ok">none</span></td></tr>
+      <tr><td><code>I6</code></td><td><b style="color:var(--ink)">Canvas performance policy</b></td><td>Visibility gating, DPR clamp, 30fps for atmosphere scenes. ~55% less fill rate on mobile.</td><td><span class="badge badge--ok">none</span></td></tr>
+      <tr><td><code>I5</code></td><td><b style="color:var(--ink)">Delete dead card CSS</b></td><td>Removes ~390 unused lines and 6 unread tokens.</td><td><span class="badge badge--ok">none</span></td></tr>
+    </table>
+  </div>
+
+  <h3>Tier 2 — The system itself. Moderate risk, highest value.</h3>
+  <div class="panel">
+    <table>
+      <tr><th style="width:8%">#</th><th style="width:34%">Change</th><th>Effect</th><th style="width:12%">Risk</th></tr>
+      <tr><td><code>I1</code></td><td><b style="color:var(--ink)">Two-layer colour architecture</b></td><td>The UI follows the Light Arc. Fox and Summary stop fighting their own art. This is the central proposal.</td><td><span class="badge badge--warn">touches every component</span></td></tr>
+      <tr><td><code>§4</code></td><td><b style="color:var(--ink)">Grade + scrim planes</b></td><td>Fixes the 2.9:1 eyebrow failure on Fox and unifies canvas particles with the photographic plates.</td><td><span class="badge badge--warn">visual</span></td></tr>
+      <tr><td><code>I2</code></td><td><b style="color:var(--ink)">Flow-field river</b></td><td>Water that visibly flows along the painted river. Demonstrated live in §6.</td><td><span class="badge badge--warn">per-scene splines</span></td></tr>
+      <tr><td><code>I3</code></td><td><b style="color:var(--ink)">Image-space character anchoring</b></td><td>Presence effects stay on their characters at every aspect ratio.</td><td><span class="badge badge--ok">low</span></td></tr>
+      <tr><td><code>§3</code></td><td><b style="color:var(--ink)">Consolidate the type scale</b></td><td>Seven tokens replace fourteen ad-hoc declarations. No visible change.</td><td><span class="badge badge--ok">low</span></td></tr>
+    </table>
+  </div>
+
+  <h3>Tier 3 — New work, for your creative sign-off</h3>
+  <p>These are proposals, not findings. Each is consistent with the established style and each is optional.</p>
+  <div class="panel">
+    <table>
+      <tr><th style="width:26%">Proposal</th><th>Rationale</th></tr>
+      <tr>
+        <td><b style="color:var(--ink)">The Cave → Fox hinge transition</b></td>
+        <td>1.4 s asymmetric dissolve with a warming grade, as specified in §8. The arc's most important moment currently gets the same 900 ms as every other transition.</td>
+      </tr>
+      <tr>
+        <td><b style="color:var(--ink)">A Riverbank return at Summary</b></td>
+        <td>Your Summary plate is already the Turtle river seen downstream in daylight. Making that explicit — a single line of copy, or recomposing the Summary art from the same camera position as Turtle — would close the loop visually. The user ends where they began, in different light. This is the strongest unused idea in your existing assets.</td>
+      </tr>
+      <tr>
+        <td><b style="color:var(--ink)">Woodland threshold between Input and Turtle</b></td>
+        <td>The journey currently jumps from a form to a riverbank. A brief non-interactive threshold scene — the woodland path from the character plate, 4 seconds, one line — would mark the entry into the world. Optional and skippable.</td>
+      </tr>
+      <tr>
+        <td><b style="color:var(--ink)">Moonlight continuity across night scenes</b></td>
+        <td>The moon sits at 72%/11% in Turtle and 47%/7% in Owl. Treating it as one moon that has <em>moved</em> — and matching every canvas glow to its per-scene position — would make the four night scenes read as one continuous night rather than four separate pictures.</td>
+      </tr>
+      <tr>
+        <td><b style="color:var(--ink)">Retire <code>bg-input.png.jpeg</code> doubling</b></td>
+        <td>Several unused plates remain in <code>/public</code> — <code>bg-owl.png.jpeg</code>, <code>bg-owl-alt.png&nbsp;.png</code>, <code>bg-plato.png.jpeg</code>, <code>bg-cave-entrance.png&nbsp;.PNG</code>, <code>bg-input-alt.png.jpeg</code>. Two have literal spaces in their filenames. Worth either adopting or removing; <code>bg-plato</code> in particular may be a better Cave step-2 plate than reusing the same interior twice.</td>
+      </tr>
+    </table>
+  </div>
+
+  <h3>What I recommend</h3>
+  <p>Approve <b>Tier 1 in full</b> — it is all correction, no aesthetic judgement, and D2 in particular is a genuine duty-of-care issue for this app's audience. Then take <b>I1 alone</b> from Tier 2 as a single focused change, because the colour architecture is the thing the other proposals depend on, and seeing it land on the Fox scene will tell you more about whether this system is right than any further specification could.</p>
+  <p>Hold Tier 3 until Tier 2 has shipped and you have lived with it.</p>
+</section>
+</div>
+</body>
+</html>

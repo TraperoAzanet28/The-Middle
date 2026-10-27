@@ -1,8 +1,7 @@
 import { useState } from "react";
+import { motion } from "motion/react";
 import type { PanelAnalysis, StageTheme } from "../types/panel";
 import { Button } from "./Button";
-import { Card } from "./Card";
-import { StageMedallion } from "./StageMedallion";
 
 type StageScreenProps = {
   theme: StageTheme;
@@ -12,345 +11,214 @@ type StageScreenProps = {
   onRestart: () => void;
 };
 
-const themeMeta = {
-  turtle: {
-    label: "Turtle",
-    title: "Feel",
-    subtitle: "Let's slow this down.",
-    question1: "What are you feeling right now?",
-    question2: "What feels strongest?",
-  },
-  owl: {
-    label: "Owl",
-    title: "See",
-    subtitle: "Let's look at this clearly.",
-    question1: "What's actually happening?",
-    question2: "What might also be true?",
-  },
-  fox: {
-    label: "Fox",
-    title: "Act",
-    subtitle: "What do you want to do next?",
-    question1: "Choose your next move",
-  },
-} as const;
+// ─── Meta per character ───────────────────────────────────────────────────────
 
-const turtleEmotions = [
-  { id: "confused", label: "Confused" },
-  { id: "hurt", label: "Hurt" },
-  { id: "angry", label: "Angry" },
-  { id: "anxious", label: "Anxious" },
-  { id: "stuck", label: "Stuck" },
-];
+const meta: Record<StageTheme, { character: string; verb: string; continueLabel: string }> = {
+  turtle: { character: "Turtle", verb: "Feel",    continueLabel: "Continue to Owl"  },
+  owl:    { character: "Owl",    verb: "See",     continueLabel: "Continue to Cave"  },
+  fox:    { character: "Fox",    verb: "Act",     continueLabel: "See Summary"       },
+};
 
-const turtleStrongest = [
-  { id: "reaction", label: "My reaction" },
-  { id: "what_they_did", label: "What they did" },
-  { id: "what_it_means", label: "What this means" },
-  { id: "what_happens", label: "What might happen next" },
-];
+// Shared step-content animation — each time the key changes React unmounts the old
+// motion.div and mounts a new one, triggering the enter animation without needing
+// AnimatePresence (exit animation is instantaneous / not needed within a stage).
+const stepTransition = {
+  initial:    { opacity: 0, y: 10 },
+  animate:    { opacity: 1, y: 0  },
+  transition: { duration: 0.38, ease: "easeOut" as const },
+};
 
-const owlFirst = [
-  { id: "assuming", label: "I might be assuming" },
-  { id: "no_facts", label: "I don't have all the facts" },
-  { id: "interpreting", label: "I'm interpreting their behavior" },
-  { id: "reacting", label: "I'm reacting emotionally" },
-];
+// ─── Turtle ───────────────────────────────────────────────────────────────────
 
-const owlAlso = [
-  { id: "no_harm", label: "They may not have meant harm" },
-  { id: "distracted", label: "They may be distracted or stressed" },
-  { id: "more_info", label: "I may need more information" },
-  { id: "ask", label: "I may need to ask instead of assume" },
-];
+function TurtleStage({ analysis, onBack, onContinue, onRestart }: Omit<StageScreenProps, "theme">) {
+  // Compute step list dynamically — skip caution if not triggered
+  const steps = [
+    analysis.turtle.caution ? "caution" : null,
+    "acknowledgment",
+    "grounding",
+    "reflect",
+  ].filter(Boolean) as string[];
 
-const foxActions = [
-  { id: "respond_calmly", label: "Respond calmly" },
-  { id: "ask_clarity", label: "Ask for clarity" },
-  { id: "set_boundary", label: "Set a boundary" },
-  { id: "wait", label: "Wait and observe" },
-  { id: "let_go", label: "Let it go" },
-];
+  const [idx, setIdx] = useState(0);
+  const current = steps[idx];
+  const isLast  = idx === steps.length - 1;
 
-const foxExamples = [
-  "I might be misunderstanding, but can you clarify?",
-  "I want to respond clearly, not react quickly.",
-  "I felt confused earlier — can we talk about it?",
-];
-
-export function StageScreen({ theme, analysis, onBack, onContinue, onRestart }: StageScreenProps) {
-  const meta = themeMeta[theme];
-  const [step, setStep] = useState(0);
-  const [selectedEmotion, setSelectedEmotion] = useState<string | null>(null);
-  const [selectedStrongest, setSelectedStrongest] = useState<string | null>(null);
-  const [intensity, setIntensity] = useState(5);
-  const [selectedOwls, setSelectedOwls] = useState<string[]>([]);
-  const [selectedFox, setSelectedFox] = useState<string | null>(null);
-
-  const handleRestart = () => {
-    setStep(0);
-    setSelectedEmotion(null);
-    setSelectedStrongest(null);
-    setIntensity(5);
-    setSelectedOwls([]);
-    setSelectedFox(null);
-    onRestart();
-  };
-
-  const renderTurtle = () => {
-    if (step === 0) {
-      return (
-        <div className="guided-step">
-          <h3>{meta.question1}</h3>
-          <div className="button-grid">
-            {turtleEmotions.map((emotion) => (
-              <button
-                key={emotion.id}
-                className={`guide-button ${selectedEmotion === emotion.id ? "guide-button--selected" : ""}`}
-                onClick={() => {
-                  setSelectedEmotion(emotion.id);
-                  setStep(1);
-                }}
-              >
-                {emotion.label}
-              </button>
-            ))}
-          </div>
-        </div>
-      );
-    }
-
-    if (step === 1) {
-      return (
-        <div className="guided-step">
-          <h3>{meta.question2}</h3>
-          <div className="button-grid">
-            {turtleStrongest.map((item) => (
-              <button
-                key={item.id}
-                className={`guide-button ${selectedStrongest === item.id ? "guide-button--selected" : ""}`}
-                onClick={() => {
-                  setSelectedStrongest(item.id);
-                  setStep(2);
-                }}
-              >
-                {item.label}
-              </button>
-            ))}
-          </div>
-        </div>
-      );
-    }
-
-    if (step === 2) {
-      return (
-        <div className="guided-step">
-          <h3>How strong is this feeling?</h3>
-          <div className="intensity-slider">
-            <div className="intensity-labels">
-              <span>Low</span>
-              <span>High</span>
-            </div>
-            <input
-              type="range"
-              min="1"
-              max="10"
-              value={intensity}
-              onChange={(e) => setIntensity(Number(e.target.value))}
-              className="range range--large"
-            />
-          </div>
-          <Button onClick={() => setStep(3)}>Continue</Button>
-        </div>
-      );
-    }
-
-    return (
-      <div className="guided-step">
-        <Card className="insight-card">
-          <h3>Key insight</h3>
-          <p>{analysis.turtle.acknowledgment}</p>
-        </Card>
-        <Card>
-          <h3>Guidance</h3>
-          <ul className="stack-list">
-            {analysis.turtle.grounding.slice(0, 2).map((item) => (
-              <li key={item}>{item}</li>
-            ))}
-          </ul>
-        </Card>
-      </div>
-    );
-  };
-
-  const renderOwl = () => {
-    if (step === 0) {
-      return (
-        <div className="guided-step">
-          <h3>{meta.question1}</h3>
-          <div className="button-grid">
-            {owlFirst.map((q) => (
-              <button
-                key={q.id}
-                className={`guide-button ${selectedOwls.includes(q.id) ? "guide-button--selected" : ""}`}
-                onClick={() => {
-                  if (!selectedOwls.includes(q.id)) {
-                    setSelectedOwls([...selectedOwls, q.id]);
-                  }
-                }}
-              >
-                {q.label}
-              </button>
-            ))}
-          </div>
-          {selectedOwls.length > 0 && (
-            <Button onClick={() => setStep(1)}>Continue</Button>
-          )}
-        </div>
-      );
-    }
-
-    if (step === 1) {
-      return (
-        <div className="guided-step">
-          <h3>{meta.question2}</h3>
-          <div className="button-grid">
-            {owlAlso.map((alt, i) => (
-              <button
-                key={i}
-                className="guide-button"
-                onClick={() => setStep(2)}
-              >
-                {alt.label}
-              </button>
-            ))}
-          </div>
-        </div>
-      );
-    }
-
-    return (
-      <div className="guided-step">
-        <Card className="insight-card">
-          <h3>What you know</h3>
-          <ul className="stack-list">
-            {analysis.owl.known.slice(0, 2).map((item) => (
-              <li key={item}>{item}</li>
-            ))}
-          </ul>
-        </Card>
-        <Card>
-          <h3>What you assumed</h3>
-          <ul className="stack-list">
-            {analysis.owl.assumed.slice(0, 2).map((item) => (
-              <li key={item}>{item}</li>
-            ))}
-          </ul>
-        </Card>
-        <Card>
-          <h3>Other possibilities</h3>
-          <ul className="stack-list">
-            {analysis.owl.alternatives.slice(0, 2).map((item) => (
-              <li key={item}>{item}</li>
-            ))}
-          </ul>
-        </Card>
-      </div>
-    );
-  };
-
-  const renderFox = () => {
-    if (step === 0) {
-      return (
-        <div className="guided-step">
-          <h3>{meta.question1}</h3>
-          <div className="action-grid">
-            {foxActions.map((action) => (
-              <button
-                key={action.id}
-                className={`action-card ${selectedFox === action.id ? "action-card--selected" : ""}`}
-                onClick={() => {
-                  setSelectedFox(action.id);
-                  setStep(1);
-                }}
-              >
-                <span className="action-label">{action.label}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-      );
-    }
-
-    return (
-      <div className="guided-step">
-        <Card className="insight-card">
-          <h3>Recommended approach</h3>
-          <p>{analysis.fox.reasoning}</p>
-        </Card>
-        <Card>
-          <h3>Example responses</h3>
-          <ul className="example-list">
-            {foxExamples.map((example, i) => (
-              <li key={i} className="example-item">{example}</li>
-            ))}
-          </ul>
-        </Card>
-        <Card>
-          <h3>Your options</h3>
-          <div className="option-list">
-            {analysis.fox.options.slice(0, 3).map((option) => (
-              <div key={option.id} className="option-item">
-                <strong>{option.title}</strong>
-                <p>{option.description}</p>
-              </div>
-            ))}
-          </div>
-        </Card>
-      </div>
-    );
-  };
+  const advance = () => isLast ? onContinue() : setIdx(i => Math.min(i + 1, steps.length - 1));
+  const retreat = () => idx === 0 ? onBack() : setIdx(i => Math.max(i - 1, 0));
 
   return (
-    <section className={`stage stage--${theme}`}>
-      <Card className={`stage-hero stage-hero--${theme}`}>
-        <div className="stage-hero__icon" aria-hidden="true">
-          <StageMedallion
-            theme={theme}
-            label={meta.label}
-            size="large"
-          />
-        </div>
-        <div>
-          <span className="eyebrow">{meta.label}</span>
-          <h2>{meta.title}</h2>
-          <p>{meta.subtitle}</p>
-        </div>
-      </Card>
+    <div className="q-screen">
+      {/* key={current} triggers a fresh enter animation on each step change */}
+      <motion.div key={current} className="q-step-content" {...stepTransition}>
+        {current === "caution" && (
+          <>
+            <p className="q-screen__context">Turtle · Feel</p>
+            <p className="q-screen__prompt">Before we begin — your intensity is high.</p>
+            <p className="q-reflection-body">{analysis.turtle.caution}</p>
+          </>
+        )}
 
-      {theme === "turtle" && renderTurtle()}
-      {theme === "owl" && renderOwl()}
-      {theme === "fox" && renderFox()}
+        {current === "acknowledgment" && (
+          <>
+            <p className="q-screen__context">Turtle · Feel</p>
+            <p className="q-screen__prompt q-screen__prompt--serif">
+              {analysis.turtle.acknowledgment}
+            </p>
+          </>
+        )}
 
-      <div className="form-actions">
-        <Button onClick={onBack} variant="ghost">
-          Back
+        {current === "grounding" && (
+          <>
+            <p className="q-screen__context">Grounding</p>
+            <div className="q-moment-items">
+              {analysis.turtle.grounding.slice(0, 3).map((item) => (
+                <p key={item} className="q-moment-item">{item}</p>
+              ))}
+            </div>
+          </>
+        )}
+
+        {current === "reflect" && (
+          <>
+            <p className="q-screen__context">A question to carry forward</p>
+            <p className="q-screen__prompt q-screen__prompt--italic">
+              {analysis.turtle.reflectivePrompt}
+            </p>
+          </>
+        )}
+      </motion.div>
+
+      <div className="q-screen__nav">
+        <Button variant="ghost" onClick={retreat}>Back</Button>
+        {idx > 0 && (
+          <Button variant="ghost" onClick={onRestart}>Start over</Button>
+        )}
+        <Button onClick={advance}>
+          {isLast ? meta.turtle.continueLabel : "Continue"}
         </Button>
-        {step > 0 && (
-          <Button onClick={handleRestart} variant="ghost">
-            Restart
-          </Button>
-        )}
-        {step >= 3 && theme === "turtle" && (
-          <Button onClick={onContinue}>Continue</Button>
-        )}
-        {step >= 2 && theme === "owl" && (
-          <Button onClick={onContinue}>Continue</Button>
-        )}
-        {step >= 1 && theme === "fox" && (
-          <Button onClick={onContinue}>See Summary</Button>
-        )}
       </div>
-    </section>
+    </div>
   );
+}
+
+// ─── Owl ──────────────────────────────────────────────────────────────────────
+
+function OwlStage({ analysis, onBack, onContinue, onRestart }: Omit<StageScreenProps, "theme">) {
+  const [idx, setIdx] = useState(0);
+
+  const steps = [
+    { context: "What you know for certain",    items: analysis.owl.known.slice(0, 3)        },
+    { context: "What you may be assuming",     items: analysis.owl.assumed.slice(0, 3)      },
+    { context: "What else might be true",      items: analysis.owl.alternatives.slice(0, 3)  },
+    { context: "A question to hold",           items: [analysis.owl.reframes[0]]             },
+  ];
+
+  const step   = steps[idx];
+  const isLast = idx === steps.length - 1;
+  const advance = () => isLast ? onContinue() : setIdx(i => Math.min(i + 1, steps.length - 1));
+  const retreat = () => idx === 0 ? onBack() : setIdx(i => Math.max(i - 1, 0));
+
+  return (
+    <div className="q-screen">
+      <motion.div key={idx} className="q-step-content" {...stepTransition}>
+        <p className="q-screen__context">Owl · See — {step.context}</p>
+
+        {isLast ? (
+          // Final step: single reframe shown as a large serif prompt
+          <p className="q-screen__prompt q-screen__prompt--italic">
+            {step.items[0]}
+          </p>
+        ) : (
+          <div className="q-moment-items">
+            {step.items.map((item) => (
+              <p key={item} className="q-moment-item">{item}</p>
+            ))}
+          </div>
+        )}
+      </motion.div>
+
+      <div className="q-screen__nav">
+        <Button variant="ghost" onClick={retreat}>Back</Button>
+        {idx > 0 && (
+          <Button variant="ghost" onClick={onRestart}>Start over</Button>
+        )}
+        <Button onClick={advance}>
+          {isLast ? meta.owl.continueLabel : "Continue"}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+// ─── Fox ──────────────────────────────────────────────────────────────────────
+
+function FoxStage({ analysis, onBack, onContinue, onRestart }: Omit<StageScreenProps, "theme">) {
+  const [idx, setIdx] = useState(0);
+
+  const isLast  = idx === 2;
+  const advance = () => isLast ? onContinue() : setIdx(i => Math.min(i + 1, 2));
+  const retreat = () => idx === 0 ? onBack() : setIdx(i => Math.max(i - 1, 0));
+
+  return (
+    <div className="q-screen">
+      <motion.div key={idx} className="q-step-content" {...stepTransition}>
+        {idx === 0 && (
+          <>
+            <p className="q-screen__context">Fox · Act — The most intentional next move</p>
+            <p className="q-screen__prompt">{analysis.fox.reasoning}</p>
+          </>
+        )}
+
+        {idx === 1 && (
+          <>
+            <p className="q-screen__context">Fox · Act — Your available paths</p>
+            <div className="q-fox-options">
+              {analysis.fox.options.slice(0, 3).map((option) => (
+                <div
+                  key={option.id}
+                  className={`q-fox-option ${option.id === analysis.fox.recommendedId ? "q-fox-option--recommended" : ""}`}
+                >
+                  <div className="q-fox-option__header">
+                    <span className="q-fox-option__timing">{option.timing}</span>
+                    {option.id === analysis.fox.recommendedId && (
+                      <span className="q-fox-option__rec">Recommended</span>
+                    )}
+                  </div>
+                  <p className="q-fox-option__title">{option.title}</p>
+                  <p className="q-fox-option__desc">{option.description}</p>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+
+        {idx === 2 && (
+          <>
+            <p className="q-screen__context">Fox · Act — A place to start</p>
+            <p className="q-screen__prompt q-screen__prompt--italic q-screen__prompt--small">
+              &ldquo;{analysis.exampleMessage}&rdquo;
+            </p>
+          </>
+        )}
+      </motion.div>
+
+      <div className="q-screen__nav">
+        <Button variant="ghost" onClick={retreat}>Back</Button>
+        {idx > 0 && (
+          <Button variant="ghost" onClick={onRestart}>Start over</Button>
+        )}
+        <Button onClick={advance}>
+          {isLast ? meta.fox.continueLabel : "Continue"}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+// ─── Export ───────────────────────────────────────────────────────────────────
+
+export function StageScreen({ theme, analysis, onBack, onContinue, onRestart }: StageScreenProps) {
+  if (theme === "turtle") return <TurtleStage analysis={analysis} onBack={onBack} onContinue={onContinue} onRestart={onRestart} />;
+  if (theme === "owl")    return <OwlStage    analysis={analysis} onBack={onBack} onContinue={onContinue} onRestart={onRestart} />;
+  return                         <FoxStage    analysis={analysis} onBack={onBack} onContinue={onContinue} onRestart={onRestart} />;
 }

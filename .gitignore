@@ -4,3 +4,17 @@ dist
 *.tsbuildinfo
 vite.config.js
 vite.config.d.ts
+
+# Environment variables (never commit real secrets; see .env.example)
+.env
+.env.*
+!.env.example
+
+# OS metadata
+.DS_Store
+
+# Vite writes transient config bundles next to the config file on each start
+*.timestamp-*.mjs
+
+# Local agent / editor workspace config
+.claude/

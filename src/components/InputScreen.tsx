@@ -1,6 +1,6 @@
-import type { GoalOption, PanelInput, UrgencyOption } from "../types/panel";
+import { useState } from "react";
+import type { GoalOption, PanelInput } from "../types/panel";
 import { Button } from "./Button";
-import { Card } from "./Card";
 
 type InputScreenProps = {
   value: PanelInput;
@@ -9,199 +9,177 @@ type InputScreenProps = {
   onContinue: () => void;
 };
 
-const emotions: PanelInput["emotion"][] = [
-  "angry",
-  "hurt",
-  "confused",
-  "frustrated",
-  "anxious",
-  "disappointed",
-  "sad",
-  "other",
+const emotions: { id: PanelInput["emotion"]; label: string }[] = [
+  { id: "angry",        label: "Angry"          },
+  { id: "hurt",         label: "Hurt"            },
+  { id: "anxious",      label: "Anxious"         },
+  { id: "frustrated",   label: "Frustrated"      },
+  { id: "confused",     label: "Confused"        },
+  { id: "disappointed", label: "Disappointed"    },
+  { id: "sad",          label: "Sad"             },
+  { id: "other",        label: "Something else"  },
 ];
 
-const goals: GoalOption[] = [
-  "fix relationship",
-  "set boundary",
-  "get clarity",
-  "respond calmly",
-  "protect myself",
-  "decide whether to act",
-  "other",
+const goals: { id: GoalOption; label: string }[] = [
+  { id: "fix relationship",      label: "Repair the relationship"       },
+  { id: "set boundary",          label: "Set a clear boundary"          },
+  { id: "get clarity",           label: "Understand what happened"      },
+  { id: "respond calmly",        label: "Respond without reacting"      },
+  { id: "protect myself",        label: "Protect myself"                },
+  { id: "decide whether to act", label: "Decide whether to act at all"  },
+  { id: "other",                 label: "Something else"                },
 ];
 
-const urgencyOptions: UrgencyOption[] = ["now", "soon", "can wait"];
-const suggestionChips = [
+const starters = [
   {
-    label: "Ignored after reaching out",
-    description: "Someone stopped replying and it feels personal.",
-    value: "Someone stopped replying to my messages and I am not sure whether to reach out again or step back.",
+    label: "Someone went silent",
+    value: "Someone I care about stopped replying and I'm not sure whether to reach out or give them space.",
     emotion: "hurt" as const,
     goal: "get clarity" as const,
   },
   {
-    label: "Boundary issue",
-    description: "A repeated behavior is wearing me down.",
-    value: "A pattern keeps repeating, and I need to decide whether to set a clearer boundary without escalating things.",
+    label: "A boundary was crossed",
+    value: "A pattern keeps repeating, and I need to decide whether to say something clearly or step back.",
     emotion: "frustrated" as const,
     goal: "set boundary" as const,
   },
   {
-    label: "Repair after tension",
-    description: "I want to fix the relationship without reacting badly.",
-    value: "There was tension between us, and I want to address it in a way that protects the relationship instead of making it worse.",
+    label: "There was tension",
+    value: "There was friction between us, and I want to address it without making things worse.",
     emotion: "anxious" as const,
     goal: "fix relationship" as const,
   },
 ] as const;
 
-export function InputScreen({
-  value,
-  onChange,
-  onBack,
-  onContinue,
-}: InputScreenProps) {
-  const update = <K extends keyof PanelInput>(key: K, nextValue: PanelInput[K]) => {
-    onChange({ ...value, [key]: nextValue });
-  };
+export function InputScreen({ value, onChange, onBack, onContinue }: InputScreenProps) {
+  const [step, setStep] = useState(0);
 
-  const isReady =
-    value.conflictDescription.trim().length > 0 &&
-    value.emotion.length > 0 &&
-    value.goal.length > 0;
+  const update = <K extends keyof PanelInput>(key: K, next: PanelInput[K]) =>
+    onChange({ ...value, [key]: next });
 
-  const isVague = value.conflictDescription.trim().split(/\s+/).filter(Boolean).length < 10;
+  const hasDescription = value.conflictDescription.trim().length > 8;
+  const isEmpty        = value.conflictDescription.trim().length === 0;
 
-  return (
-    <Card className="screen-card">
-      <div className="section-heading">
-        <div>
-          <span className="eyebrow">Input</span>
-          <h2>Describe the moment before you decide what it means</h2>
-        </div>
-        <p>
-          Keep it simple. You only need enough detail to help the system slow,
-          clarify, and guide your next move.
+  // ── Step 0: What happened? ────────────────────────────────────────────────
+  if (step === 0) {
+    return (
+      <div className="q-screen q-screen--input">
+        <p className="q-screen__context">Begin here</p>
+        <p className="q-screen__prompt">
+          What is the situation you are trying to navigate?
         </p>
+        <div className="q-screen__body">
+          <textarea
+            className="q-textarea"
+            rows={5}
+            value={value.conflictDescription}
+            onChange={(e) => update("conflictDescription", e.target.value)}
+            placeholder="Describe what happened, as simply as you can."
+            autoFocus
+          />
+          {isEmpty && (
+            <div className="q-starters">
+              <p className="q-starters__label">Start with one of these, then make it yours</p>
+              {starters.map((s) => (
+                <button
+                  key={s.label}
+                  className="q-starter"
+                  onClick={() =>
+                    onChange({ ...value, conflictDescription: s.value, emotion: s.emotion, goal: s.goal })
+                  }
+                >
+                  {s.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+        <div className="q-screen__nav">
+          <Button variant="ghost" onClick={onBack}>Back</Button>
+          {hasDescription && (
+            <Button onClick={() => setStep(1)}>Continue</Button>
+          )}
+        </div>
       </div>
+    );
+  }
 
-      <label className="field">
-        <span>What happened?</span>
-        <textarea
-          rows={5}
-          value={value.conflictDescription}
-          onChange={(event) => update("conflictDescription", event.target.value)}
-          placeholder="Describe the conflict, misunderstanding, or emotionally difficult moment."
-        />
-      </label>
-
-      {isVague ? (
-        <div className="inline-note inline-note--guide">
-          <div>
-            <strong>Need help getting started?</strong>
-            <p>
-              Short is okay. Use one of these starters, then adjust the wording
-              so it feels like yours.
-            </p>
-          </div>
-          <div className="suggestion-grid">
-            {suggestionChips.map((chip) => (
-              <button
-                className="suggestion-chip"
-                key={chip.label}
-                onClick={() =>
-                  onChange({
-                    ...value,
-                    conflictDescription: chip.value,
-                    emotion: chip.emotion,
-                    goal: chip.goal,
-                  })
-                }
-                type="button"
-              >
-                <strong>{chip.label}</strong>
-                <span>{chip.description}</span>
-              </button>
-            ))}
-          </div>
+  // ── Step 1: What emotion? ─────────────────────────────────────────────────
+  if (step === 1) {
+    return (
+      <div className="q-screen">
+        <p className="q-screen__context">Your feeling</p>
+        <p className="q-screen__prompt">
+          What is the closest emotion to what you are experiencing right now?
+        </p>
+        <div className="q-pills">
+          {emotions.map((e) => (
+            <button
+              key={e.id}
+              className={`q-pill ${value.emotion === e.id ? "q-pill--selected" : ""}`}
+              onClick={() => { update("emotion", e.id); setStep(2); }}
+            >
+              {e.label}
+            </button>
+          ))}
         </div>
-      ) : null}
-
-      <div className="control-grid">
-        <div className="cluster">
-          <span className="cluster__label">Current emotion</span>
-          <div className="segmented-grid">
-            {emotions.map((emotion) => (
-              <button
-                className={`choice ${value.emotion === emotion ? "choice--selected" : ""}`}
-                key={emotion}
-                onClick={() => update("emotion", emotion)}
-                type="button"
-              >
-                {emotion}
-              </button>
-            ))}
-          </div>
+        <div className="q-screen__nav">
+          <Button variant="ghost" onClick={() => setStep(0)}>Back</Button>
         </div>
+      </div>
+    );
+  }
 
-        <div className="cluster">
-          <div className="cluster__header">
-            <span className="cluster__label">Intensity</span>
-            <strong>{value.intensity}/10</strong>
-          </div>
+  // ── Step 2: How intense? ──────────────────────────────────────────────────
+  if (step === 2) {
+    return (
+      <div className="q-screen">
+        <p className="q-screen__context">Intensity</p>
+        <p className="q-screen__prompt">How strong is this feeling right now?</p>
+        <div className="q-intensity">
+          <div className="q-intensity__number">{value.intensity}</div>
           <input
-            aria-label="Emotion intensity"
-            className="range"
+            type="range"
             min="1"
             max="10"
-            step="1"
-            type="range"
             value={value.intensity}
-            onChange={(event) => update("intensity", Number(event.target.value))}
+            onChange={(e) => update("intensity", Number(e.target.value))}
+            className="q-range"
           />
+          <div className="q-intensity__labels">
+            <span>Barely there</span>
+            <span>Overwhelming</span>
+          </div>
+        </div>
+        <div className="q-screen__nav">
+          <Button variant="ghost" onClick={() => setStep(1)}>Back</Button>
+          <Button onClick={() => setStep(3)}>Continue</Button>
         </div>
       </div>
+    );
+  }
 
-      <div className="cluster">
-        <span className="cluster__label">Your goal</span>
-        <div className="segmented-grid segmented-grid--wide">
-          {goals.map((goal) => (
-            <button
-              className={`choice ${value.goal === goal ? "choice--selected" : ""}`}
-              key={goal}
-              onClick={() => update("goal", goal)}
-              type="button"
-            >
-              {goal}
-            </button>
-          ))}
-        </div>
+  // ── Step 3: What do you want? ─────────────────────────────────────────────
+  return (
+    <div className="q-screen">
+      <p className="q-screen__context">Your intention</p>
+      <p className="q-screen__prompt">
+        What do you most want from this moment?
+      </p>
+      <div className="q-pills">
+        {goals.map((g) => (
+          <button
+            key={g.id}
+            className={`q-pill ${value.goal === g.id ? "q-pill--selected" : ""}`}
+            onClick={() => { update("goal", g.id); onContinue(); }}
+          >
+            {g.label}
+          </button>
+        ))}
       </div>
-
-      <div className="cluster">
-        <span className="cluster__label">Urgency</span>
-        <div className="urgency-row">
-          {urgencyOptions.map((urgency) => (
-            <button
-              className={`choice choice--compact ${value.urgency === urgency ? "choice--selected" : ""}`}
-              key={urgency}
-              onClick={() => update("urgency", urgency)}
-              type="button"
-            >
-              {urgency}
-            </button>
-          ))}
-        </div>
+      <div className="q-screen__nav">
+        <Button variant="ghost" onClick={() => setStep(2)}>Back</Button>
       </div>
-
-      <div className="form-actions">
-        <Button onClick={onBack} variant="ghost">
-          Back
-        </Button>
-        <Button onClick={onContinue} disabled={!isReady}>
-          Continue to Turtle
-        </Button>
-      </div>
-    </Card>
+    </div>
   );
 }

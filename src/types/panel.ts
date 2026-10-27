@@ -19,7 +19,7 @@ export type GoalOption =
 
 export type UrgencyOption = "now" | "soon" | "can wait";
 
-export type AppStep = "home" | "input" | "turtle" | "owl" | "fox" | "summary";
+export type AppStep = "home" | "howItWorks" | "input" | "turtle" | "owl" | "cave" | "fox" | "summary";
 
 export type PanelInput = {
   conflictDescription: string;

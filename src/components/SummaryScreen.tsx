@@ -1,6 +1,5 @@
 import type { PanelAnalysis, PanelInput } from "../types/panel";
 import { Button } from "./Button";
-import { Card } from "./Card";
 
 type SummaryScreenProps = {
   input: PanelInput;
@@ -9,63 +8,54 @@ type SummaryScreenProps = {
   onRestart: () => void;
 };
 
-export function SummaryScreen({
-  input,
-  analysis,
-  onBack,
-  onRestart,
-}: SummaryScreenProps) {
+export function SummaryScreen({ input: _input, analysis, onBack, onRestart }: SummaryScreenProps) {
   const recommended =
-    analysis.fox.options.find((option) => option.id === analysis.fox.recommendedId) ??
+    analysis.fox.options.find((o) => o.id === analysis.fox.recommendedId) ??
     analysis.fox.options[0];
 
   return (
-    <section className="stack">
-      <Card className="summary-hero">
-        <span className="eyebrow">Summary</span>
-        <h2>A calmer and clearer next step</h2>
-        <p>{analysis.summary}</p>
-      </Card>
+    <div className="q-screen q-screen--summary">
+      <p className="q-screen__context">Summary</p>
 
-      <div className="summary-grid">
-        <Card>
-          <h3>Emotional state</h3>
-          <p>{analysis.summaryCard.emotionalState}</p>
-        </Card>
-        <Card>
-          <h3>Clarity insight</h3>
-          <p>{analysis.summaryCard.clarityInsight}</p>
-        </Card>
-        <Card>
-          <h3>Strategic recommendation</h3>
-          <p>{analysis.summaryCard.strategicRecommendation}</p>
-        </Card>
-        <Card>
-          <h3>Current goal</h3>
-          <p>
-            You selected <strong>{input.goal}</strong> with urgency set to{" "}
-            <strong>{input.urgency}</strong>.
-          </p>
-        </Card>
-      </div>
+      <h2 className="summary-title">
+        You paused.<br />You saw clearly.<br />You chose.
+      </h2>
 
-      <Card>
-        <h3>Recommended next step</h3>
-        <p className="summary-callout">{recommended.title}</p>
-        <p>{recommended.description}</p>
-        <p>{recommended.likelyOutcome}</p>
-        <div className="message-example">
-          <span className="pill">If you want, say it like this</span>
-          <p>{analysis.exampleMessage}</p>
+      <p className="summary-journey-bridge">
+        You moved through the forest, the river, and the dark — and arrived here.
+      </p>
+
+      <div className="summary-sections">
+        <div className="summary-section">
+          <p className="summary-section__label">What you felt</p>
+          <p className="summary-section__text">{analysis.summaryCard.emotionalState}</p>
         </div>
-      </Card>
 
-      <div className="form-actions">
-        <Button onClick={onBack} variant="ghost">
-          Back to Fox
-        </Button>
-        <Button onClick={onRestart}>Start Over</Button>
+        <div className="summary-section">
+          <p className="summary-section__label">What you saw</p>
+          <p className="summary-section__text">{analysis.summaryCard.clarityInsight}</p>
+        </div>
+
+        <div className="summary-section">
+          <p className="summary-section__label">What you chose</p>
+          <p className="summary-section__text summary-section__text--featured">
+            {recommended.title}
+          </p>
+          <p className="summary-section__text">{recommended.description}</p>
+        </div>
       </div>
-    </section>
+
+      <div className="summary-message">
+        <p className="summary-message__label">A place to start, if you need one</p>
+        <p className="summary-message__text">
+          &ldquo;{analysis.exampleMessage}&rdquo;
+        </p>
+      </div>
+
+      <div className="q-screen__nav">
+        <Button variant="ghost" onClick={onBack}>Back to Fox</Button>
+        <Button onClick={onRestart}>Begin again</Button>
+      </div>
+    </div>
   );
 }
