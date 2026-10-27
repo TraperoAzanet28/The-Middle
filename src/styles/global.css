@@ -1701,3 +1701,46 @@ body {
   }
 }
 
+
+/* ─── Reduced motion ──────────────────────────────────────────────────────────
+ *
+ * The canvas atmosphere handles this itself (AtmosphereCanvas freezes its RAF
+ * loop and paints one representative frame). This block covers the CSS side:
+ * the 42s background camera drift and the per-screen entrance animations.
+ *
+ * The intent is to remove *movement*, not to remove the experience. Content
+ * still fades, so transitions stay legible and nothing snaps between screens —
+ * but nothing translates, scales, or drifts. This matters more here than in a
+ * typical app: a user who requests reduced motion may be doing so because
+ * movement triggers nausea or vestibular symptoms, and this is an app whose
+ * entire purpose is helping someone settle their nervous system.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .screen-bg {
+    animation: none !important;
+    transform: none !important;
+  }
+
+  .hero,
+  .hiw,
+  .screen-card,
+  .stage,
+  .stack {
+    animation: reducedFadeIn 0.4s ease both;
+  }
+
+  @keyframes reducedFadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+
+  /* Catch-all for any remaining decorative CSS motion, including the
+   * fadeUp used by staged content. Opacity transitions are preserved
+   * deliberately; only movement and looping are suppressed. */
+  *,
+  *::before,
+  *::after {
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+  }
+}

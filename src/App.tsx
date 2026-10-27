@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { motion, AnimatePresence } from "motion/react";
+import { motion, AnimatePresence, MotionConfig } from "motion/react";
 import type { AppStep, PanelAnalysis, PanelInput } from "./types/panel";
 import { buildPanelAnalysis } from "./lib/panelEngine";
 import { HomeScreen }       from "./components/HomeScreen";
@@ -39,7 +39,11 @@ const screenConfig: Record<AppStep, ScreenConfig> = {
   owl:        { image: BACKGROUNDS.Owl,        effects: ["fog", "river", "fireflies", "leaves", "owl-presence"],
                 bgPosition: "left center"                                                                            },
   cave:       { image: BACKGROUNDS.CaveInside, effects: ["fog", "river"]                                            },
-  fox:        { image: BACKGROUNDS.Fox,        effects: ["clouds", "river", "fox-character"]                        },
+  // bgPosition: "right center" — same crop problem as the owl scene. The fox in
+  // this plate stands on the right-hand rock shelf, which cover+center crops
+  // away entirely on a portrait viewport.
+  fox:        { image: BACKGROUNDS.Fox,        effects: ["clouds", "river", "fox-presence"],
+                bgPosition: "right center"                                                                           },
   summary:    { image: BACKGROUNDS.Summary,    effects: ["fog", "river", "fireflies", "clouds", "leaves"]           },
 };
 
@@ -70,6 +74,12 @@ export default function App() {
   };
 
   return (
+    // reducedMotion="user" makes every motion component below drop transform
+    // and layout animations when the OS requests reduced motion, while still
+    // animating opacity. Screens therefore keep their cross-dissolve but stop
+    // sliding. Set once here rather than per-component so future motion
+    // components inherit the behavior automatically.
+    <MotionConfig reducedMotion="user">
     <div className="app">
 
       {/* Layer 0 — background image with cinematic crossfade between scenes.
@@ -182,5 +192,6 @@ export default function App() {
       {/* Layer 3 — audio toggle (fixed) */}
       <AudioToggle isMuted={isMuted} onToggle={toggle} />
     </div>
+    </MotionConfig>
   );
 }

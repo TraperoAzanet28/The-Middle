@@ -2,6 +2,9 @@ node_modules
 dist
 .vercel
 *.tsbuildinfo
+
+# Compiled output for the node:test suite (see tsconfig.test.json)
+.test-build
 vite.config.js
 vite.config.d.ts
 

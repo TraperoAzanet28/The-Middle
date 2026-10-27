@@ -1,4 +1,10 @@
 import { useEffect, useRef } from "react";
+import {
+  resolveAnchor,
+  TURTLE_ANCHOR,
+  OWL_ANCHOR,
+  FOX_ANCHOR,
+} from "../lib/presenceAnchor";
 
 export type EffectType =
   | "clouds"
@@ -8,7 +14,7 @@ export type EffectType =
   | "fog"
   | "turtle-presence"   // moonlight glow + shell shimmer (Turtle scene)
   | "owl-presence"      // atmospheric glow + periodic eye glint (Owl scene)
-  | "fox-character";    // drawn fox silhouette + warm rim light (Fox scene)
+  | "fox-presence";     // warm dawn rim-glow over the background fox (Fox scene)
 
 // ─── Particle types ───────────────────────────────────────────────────────────
 
@@ -316,9 +322,12 @@ function renderTurtlePresence(
   h: number,
   t: number,
 ) {
-  // Turtle sits at lower-center of the moonlit river scene
-  const ox = w * 0.36;
-  const oy = h * 0.80;
+  // Turtle sits low in the moonlit river scene. Anchored in image space so the
+  // glow stays on the shell at any viewport — see resolveAnchor.
+  const { x: ox, y: oy, visible } = resolveAnchor(TURTLE_ANCHOR, w, h);
+  // The subject is cropped out of this viewport; lighting it would put
+  // a glow on empty scenery. See ResolvedAnchor.visible.
+  if (!visible) return;
 
   // Soft moonlight halo — slow breathing pulse (28-second period)
   const moonPulse = 0.055 + Math.sin(t * 0.00022) * 0.022;
@@ -370,11 +379,12 @@ function renderOwlPresence(
   h: number,
   t: number,
 ) {
-  // Owl perch — left-of-center, matching background-position:"left center" crop.
-  // On a 390×844 screen the 1536×1024 image scales to 1266px wide at left edge,
-  // placing the owl's body at roughly (50%, 33%) and its eye at (61%, 27%).
-  const ox = w * 0.50;
-  const oy = h * 0.33;
+  // Owl perch — anchored in image space against the scene's "left center"
+  // crop, so the glow and the eye glint stay on the bird at any viewport.
+  const { x: ox, y: oy, visible } = resolveAnchor(OWL_ANCHOR, w, h);
+  // The subject is cropped out of this viewport; lighting it would put
+  // a glow on empty scenery. See ResolvedAnchor.visible.
+  if (!visible) return;
 
   // Soft atmospheric presence (very dim, slow breathing)
   const atmosAlpha = 0.030 + Math.sin(t * 0.00018) * 0.012;
@@ -416,153 +426,56 @@ function renderOwlPresence(
 }
 
 /**
- * Fox character — drawn silhouette with warm dawn rim lighting.
+ * Fox presence — warm dawn rim-glow over the fox already in the background.
  *
- * The fox is the most important character presence fix.
- * Drawn as a dark silhouette (sitting, alert, facing right) positioned on
- * the rocky highland terrain, with amber rim light from the dawn sky behind.
- * The breathing animation is 40-second period — nearly imperceptible.
+ * IMPORTANT: bg-fox.png.jpeg ALREADY CONTAINS a photoreal fox, standing on the
+ * rock shelf on the right-hand side of the valley. An earlier version of this
+ * function drew a second, hand-drawn fox silhouette on the canvas, which
+ * produced two foxes on screen at once on any viewport wide enough to show the
+ * background one. It also read as illustrated rather than photoreal, which is
+ * off-direction for this app.
+ *
+ * This renderer therefore draws NO animal. Like renderTurtlePresence and
+ * renderOwlPresence, it only adds light to the creature that is already in the
+ * plate: a slow dawn halo and a faint rim catch along the cliff edge.
+ *
+ * Position comes from FOX_ANCHOR, which is in image space, so it tracks the
+ * fox across viewports. The scene also needs bgPosition:"right center" in
+ * App.tsx — the fox lives near the right edge of the plate and a centered
+ * cover-crop removes it entirely on portrait, the same trap the owl hit.
  */
-function renderFoxCharacter(
+function renderFoxPresence(
   ctx: CanvasRenderingContext2D,
   w: number,
   h: number,
   t: number,
 ) {
-  // Fox origin — lower-center-right, standing on the highland rock shelf
-  const ox = w * 0.60;
-  const oy = h * 0.76;
-  // Scale: fox body ~10% of viewport's smaller dimension
-  const s  = Math.min(w, h) * 0.145;
+  const { x: ox, y: oy, visible } = resolveAnchor(FOX_ANCHOR, w, h);
+  // The subject is cropped out of this viewport; lighting it would put
+  // a glow on empty scenery. See ResolvedAnchor.visible.
+  if (!visible) return;
 
-  // Very slow breathing (40-second full cycle — almost imperceptible)
-  const breathe = 1 + Math.sin(t * 0.000157) * 0.007;
-
-  ctx.save();
-  ctx.translate(ox, oy);
-  ctx.scale(breathe, breathe);
-
-  // ── Ground shadow — anchors fox to the terrain ──────────────────────────
-  const shadow = ctx.createRadialGradient(0, 0, 0, 0, 0, s * 0.55);
-  shadow.addColorStop(0,   'rgba(0, 0, 0, 0.28)');
-  shadow.addColorStop(0.6, 'rgba(0, 0, 0, 0.10)');
-  shadow.addColorStop(1,   'rgba(0, 0, 0, 0)');
-  ctx.fillStyle = shadow;
-  ctx.beginPath();
-  ctx.ellipse(0, -s * 0.04, s * 0.55, s * 0.10, 0, 0, Math.PI * 2);
-  ctx.fill();
-
-  // ── Warm dawn rim-light halo behind the fox ──────────────────────────────
-  const rimPulse = 0.095 + Math.sin(t * 0.000320) * 0.030;
-  const halo = ctx.createRadialGradient(s * 0.12, -s * 0.52, 0, s * 0.12, -s * 0.52, s * 1.45);
-  halo.addColorStop(0,    `rgba(240, 160, 60, ${rimPulse * 0.90})`);
-  halo.addColorStop(0.30, `rgba(220, 130, 45, ${rimPulse * 0.48})`);
-  halo.addColorStop(0.65, `rgba(200, 105, 30, ${rimPulse * 0.16})`);
-  halo.addColorStop(1,    'rgba(180, 85, 20, 0)');
+  // Warm dawn halo — slow breathing pulse (~33-second period).
+  const dawnPulse = 0.050 + Math.sin(t * 0.000190) * 0.020;
+  const halo = ctx.createRadialGradient(ox, oy, 0, ox, oy, w * 0.26);
+  halo.addColorStop(0,    `rgba(245, 186, 108, ${dawnPulse})`);
+  halo.addColorStop(0.40, `rgba(232, 158, 78, ${dawnPulse * 0.46})`);
+  halo.addColorStop(0.78, `rgba(214, 132, 56, ${dawnPulse * 0.15})`);
+  halo.addColorStop(1,    'rgba(198, 112, 40, 0)');
   ctx.fillStyle = halo;
   ctx.beginPath();
-  ctx.ellipse(s * 0.12, -s * 0.52, s * 1.45, s * 1.10, 0, 0, Math.PI * 2);
+  ctx.ellipse(ox, oy, w * 0.26, h * 0.12, 0, 0, Math.PI * 2);
   ctx.fill();
 
-  // ── Fox silhouette — very dark warm tone ────────────────────────────────
-  const body = 'rgba(14, 9, 4, 0.93)';
-  ctx.fillStyle = body;
-
-  // Tail (drawn first — sits behind body)
-  ctx.beginPath();
-  ctx.moveTo(-s * 0.30, -s * 0.26);
-  ctx.bezierCurveTo(-s * 0.50, -s * 0.14, -s * 0.72, s * 0.04, -s * 0.70, s * 0.10);
-  ctx.bezierCurveTo(-s * 0.62, s * 0.16, -s * 0.44, s * 0.08, -s * 0.36, s * 0.00);
-  ctx.bezierCurveTo(-s * 0.28, -s * 0.08, -s * 0.24, -s * 0.16, -s * 0.30, -s * 0.26);
-  ctx.fill();
-
-  // Tail tip softening gradient (adds bushy texture to tail end)
-  const tailGrd = ctx.createRadialGradient(-s * 0.69, s * 0.09, 0, -s * 0.69, s * 0.09, s * 0.20);
-  tailGrd.addColorStop(0, 'rgba(36, 22, 10, 0.55)');
-  tailGrd.addColorStop(1, 'rgba(14, 9, 4, 0)');
-  ctx.fillStyle = tailGrd;
-  ctx.beginPath();
-  ctx.ellipse(-s * 0.69, s * 0.09, s * 0.20, s * 0.15, 0.4, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Body — crouching ellipse, slightly angled
-  ctx.fillStyle = body;
-  ctx.beginPath();
-  ctx.ellipse(-s * 0.02, -s * 0.30, s * 0.44, s * 0.28, -0.14, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Neck — bridges body to head
-  ctx.beginPath();
-  ctx.moveTo(s * 0.14, -s * 0.50);
-  ctx.bezierCurveTo(s * 0.20, -s * 0.54, s * 0.28, -s * 0.58, s * 0.30, -s * 0.55);
-  ctx.bezierCurveTo(s * 0.26, -s * 0.50, s * 0.18, -s * 0.47, s * 0.14, -s * 0.50);
-  ctx.fill();
-
-  // Head
-  ctx.beginPath();
-  ctx.ellipse(s * 0.33, -s * 0.65, s * 0.21, s * 0.19, 0.18, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Snout — pointed muzzle extending forward (right)
-  ctx.beginPath();
-  ctx.moveTo(s * 0.46, -s * 0.64);
-  ctx.bezierCurveTo(s * 0.60, -s * 0.61, s * 0.67, -s * 0.57, s * 0.63, -s * 0.54);
-  ctx.bezierCurveTo(s * 0.56, -s * 0.51, s * 0.44, -s * 0.56, s * 0.46, -s * 0.64);
-  ctx.fill();
-
-  // Near ear (left) — tall pointed triangle
-  ctx.beginPath();
-  ctx.moveTo(s * 0.22, -s * 0.80);
-  ctx.lineTo(s * 0.15, -s * 1.01);
-  ctx.lineTo(s * 0.33, -s * 0.83);
-  ctx.closePath();
-  ctx.fill();
-
-  // Far ear (right) — slightly smaller, partially behind
-  ctx.beginPath();
-  ctx.moveTo(s * 0.36, -s * 0.80);
-  ctx.lineTo(s * 0.30, -s * 0.97);
-  ctx.lineTo(s * 0.45, -s * 0.82);
-  ctx.closePath();
-  ctx.fill();
-
-  // Front legs — subtle hints at the base of the body
-  ctx.beginPath();
-  ctx.ellipse(s * 0.22, -s * 0.08, s * 0.065, s * 0.12, 0.12, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.beginPath();
-  ctx.ellipse(s * 0.07, -s * 0.07, s * 0.060, s * 0.11, -0.08, 0, Math.PI * 2);
-  ctx.fill();
-
-  // ── Rim light strokes — dawn light catching fox edges ───────────────────
-  const rimAlpha = 0.20 + Math.sin(t * 0.000320) * 0.065;
-  ctx.strokeStyle = `rgba(245, 170, 68, ${rimAlpha})`;
-  ctx.lineWidth   = 1.5;
-  ctx.lineCap     = 'round';
-
-  // Back of body — primary rim catch
-  ctx.beginPath();
-  ctx.ellipse(-s * 0.02, -s * 0.30, s * 0.44, s * 0.28, -0.14, Math.PI * 0.88, Math.PI * 1.72);
-  ctx.stroke();
-
-  // Top of head — moonlight above
-  ctx.beginPath();
-  ctx.ellipse(s * 0.33, -s * 0.65, s * 0.21, s * 0.19, 0.18, -Math.PI * 0.18, Math.PI * 0.55);
-  ctx.stroke();
-
-  // Ear edges — catching the light
-  ctx.beginPath();
-  ctx.moveTo(s * 0.15, -s * 1.01);
-  ctx.lineTo(s * 0.22, -s * 0.80);
-  ctx.stroke();
-
-  // Top of tail arc
-  ctx.beginPath();
-  ctx.moveTo(-s * 0.30, -s * 0.28);
-  ctx.bezierCurveTo(-s * 0.48, -s * 0.18, -s * 0.68, s * 0.01, -s * 0.72, s * 0.07);
-  ctx.stroke();
-
-  ctx.restore();
+  // Rim catch along the cliff edge the fox is standing on — a short, soft
+  // horizontal band of low sun, not an outline around the animal.
+  const rimAlpha = 0.055 + Math.sin(t * 0.000260 + 0.8) * 0.022;
+  const rim = ctx.createLinearGradient(ox - w * 0.10, oy, ox + w * 0.12, oy);
+  rim.addColorStop(0,   'rgba(255, 206, 140, 0)');
+  rim.addColorStop(0.5, `rgba(255, 214, 152, ${rimAlpha})`);
+  rim.addColorStop(1,   'rgba(255, 206, 140, 0)');
+  ctx.fillStyle = rim;
+  ctx.fillRect(ox - w * 0.10, oy + h * 0.018, w * 0.22, 1.6);
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -570,6 +483,16 @@ function renderFoxCharacter(
 type Props = {
   effects: EffectType[];
 };
+
+/**
+ * Timestamp used for the single frame rendered in reduced-motion mode.
+ *
+ * Not 0: several renderers key their opacity off sin(t * k), which sits at its
+ * trough at t=0 and would render the presence glows nearly invisible. This
+ * value lands mid-cycle for the slow pulses, so a reduced-motion user sees the
+ * scene as it looks at a representative moment rather than at its dimmest.
+ */
+const STATIC_FRAME_T = 6000;
 
 export function AtmosphereCanvas({ effects }: Props) {
   const canvasRef  = useRef<HTMLCanvasElement>(null);
@@ -583,10 +506,32 @@ export function AtmosphereCanvas({ effects }: Props) {
   const fireflies = useRef(makeFireflies());
   const fog       = useRef(makeFog());
 
+  // Re-rendering a static frame is needed whenever the scene changes while
+  // motion is suppressed, since there is no RAF loop to pick the change up.
+  const redrawStaticRef = useRef<() => void>(() => {});
+
   useEffect(() => {
     const canvas = canvasRef.current;
     const ctx    = canvas?.getContext("2d");
     if (!canvas || !ctx) return;
+
+    const paint = (t: number) => {
+      const w  = window.innerWidth;
+      const h  = window.innerHeight;
+      const fx = effectsRef.current;
+
+      ctx.clearRect(0, 0, w, h);
+
+      // Render order: fog → clouds → river → character presence → leaves → fireflies
+      if (fx.includes("fog"))             renderFog(ctx, w, h, t, fog.current);
+      if (fx.includes("clouds"))          renderClouds(ctx, w, h, t, clouds.current);
+      if (fx.includes("river"))           renderRiver(ctx, w, h, t, streaks.current);
+      if (fx.includes("turtle-presence")) renderTurtlePresence(ctx, w, h, t);
+      if (fx.includes("owl-presence"))    renderOwlPresence(ctx, w, h, t);
+      if (fx.includes("fox-presence"))    renderFoxPresence(ctx, w, h, t);
+      if (fx.includes("leaves"))          renderLeaves(ctx, w, h, t, leaves.current);
+      if (fx.includes("fireflies"))       renderFireflies(ctx, w, h, t, fireflies.current);
+    };
 
     const resize = () => {
       const dpr = window.devicePixelRatio || 1;
@@ -596,36 +541,58 @@ export function AtmosphereCanvas({ effects }: Props) {
       canvas.style.height = `${window.innerHeight}px`;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     };
-    resize();
-    window.addEventListener("resize", resize);
 
-    const draw = (t: number) => {
-      const w  = window.innerWidth;
-      const h  = window.innerHeight;
-      const fx = effectsRef.current;
+    const motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
 
-      ctx.clearRect(0, 0, w, h);
-
-      // Render order: fog → clouds → river → character presence → leaves → fireflies
-      if (fx.includes("fog"))              renderFog(ctx, w, h, t, fog.current);
-      if (fx.includes("clouds"))           renderClouds(ctx, w, h, t, clouds.current);
-      if (fx.includes("river"))            renderRiver(ctx, w, h, t, streaks.current);
-      if (fx.includes("turtle-presence")) renderTurtlePresence(ctx, w, h, t);
-      if (fx.includes("owl-presence"))    renderOwlPresence(ctx, w, h, t);
-      if (fx.includes("fox-character"))   renderFoxCharacter(ctx, w, h, t);
-      if (fx.includes("leaves"))          renderLeaves(ctx, w, h, t, leaves.current);
-      if (fx.includes("fireflies"))       renderFireflies(ctx, w, h, t, fireflies.current);
-
-      rafRef.current = requestAnimationFrame(draw);
+    const drawAnimated = (t: number) => {
+      paint(t);
+      rafRef.current = requestAnimationFrame(drawAnimated);
     };
 
-    rafRef.current = requestAnimationFrame(draw);
+    // Reduced motion keeps the atmosphere — fog, glow, the character presences
+    // are all still composed — but freezes it. The scene becomes a still
+    // photograph rather than being stripped bare, which preserves the
+    // contemplative framing for users who cannot tolerate movement.
+    const drawStatic = () => {
+      resize();
+      paint(STATIC_FRAME_T);
+    };
+
+    const stop = () => cancelAnimationFrame(rafRef.current);
+
+    const applyMotionPreference = () => {
+      stop();
+      if (motionQuery.matches) {
+        redrawStaticRef.current = drawStatic;
+        drawStatic();
+      } else {
+        redrawStaticRef.current = () => {};
+        resize();
+        rafRef.current = requestAnimationFrame(drawAnimated);
+      }
+    };
+
+    const onResize = () => {
+      if (motionQuery.matches) drawStatic();
+      else resize();
+    };
+
+    applyMotionPreference();
+    window.addEventListener("resize", onResize);
+    motionQuery.addEventListener("change", applyMotionPreference);
 
     return () => {
-      window.removeEventListener("resize", resize);
-      cancelAnimationFrame(rafRef.current);
+      window.removeEventListener("resize", onResize);
+      motionQuery.removeEventListener("change", applyMotionPreference);
+      stop();
     };
   }, []);
+
+  // In reduced-motion mode no loop is running, so a scene change would
+  // otherwise leave the previous screen's effects frozen on the canvas.
+  useEffect(() => {
+    redrawStaticRef.current();
+  }, [effects]);
 
   return (
     <canvas
