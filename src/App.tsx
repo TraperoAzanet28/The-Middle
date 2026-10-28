@@ -13,6 +13,7 @@ import { AtmosphereCanvas, type EffectType } from "./components/AtmosphereCanvas
 import { AudioToggle }      from "./components/AudioToggle";
 import { useAmbientAudio }  from "./hooks/useAmbientAudio";
 import { BACKGROUNDS }      from "./prompts/backgrounds";
+import { OWL_RIVER, SUMMARY_RIVER, type RiverGeometry } from "./lib/riverFlow";
 import "./styles/global.css";
 
 const defaultInput: PanelInput = {
@@ -27,6 +28,15 @@ type ScreenConfig = {
   image: string;
   effects: EffectType[];
   bgPosition?: string;
+  /**
+   * Pixel-traced course of the river in this scene's plate.
+   *
+   * Set only where the trace has been rendered back over the art and checked
+   * by eye. Scenes without one fall back to the generic band river — see the
+   * `river` prop on AtmosphereCanvas. A geometry's `align` MUST match this
+   * entry's `bgPosition`, or the current slides off the painted water.
+   */
+  river?: RiverGeometry;
 };
 
 const screenConfig: Record<AppStep, ScreenConfig> = {
@@ -37,14 +47,15 @@ const screenConfig: Record<AppStep, ScreenConfig> = {
   // bgPosition: "left center" — the owl sits on the far-left of the landscape image;
   // cover+center crops it entirely on portrait screens. Shift to expose the owl.
   owl:        { image: BACKGROUNDS.Owl,        effects: ["fog", "river", "fireflies", "leaves", "owl-presence"],
-                bgPosition: "left center"                                                                            },
+                bgPosition: "left center", river: OWL_RIVER                                                          },
   cave:       { image: BACKGROUNDS.CaveInside, effects: ["fog", "river"]                                            },
   // bgPosition: "right center" — same crop problem as the owl scene. The fox in
   // this plate stands on the right-hand rock shelf, which cover+center crops
   // away entirely on a portrait viewport.
   fox:        { image: BACKGROUNDS.Fox,        effects: ["clouds", "river", "fox-presence"],
                 bgPosition: "right center"                                                                           },
-  summary:    { image: BACKGROUNDS.Summary,    effects: ["fog", "river", "fireflies", "clouds", "leaves"]           },
+  summary:    { image: BACKGROUNDS.Summary,    effects: ["fog", "river", "fireflies", "clouds", "leaves"],
+                river: SUMMARY_RIVER                                                                                 },
 };
 
 // Steps where the cinematic progress bar is shown
@@ -56,7 +67,7 @@ export default function App() {
   const [analysis, setAnalysis] = useState<PanelAnalysis | null>(null);
 
   const { isMuted, toggle } = useAmbientAudio(step);
-  const { image, effects, bgPosition = "center" } = screenConfig[step];
+  const { image, effects, bgPosition = "center", river } = screenConfig[step];
   const showProgress        = progressSteps.includes(step);
 
   const handleStart      = () => setStep("input");
@@ -100,7 +111,7 @@ export default function App() {
       </AnimatePresence>
 
       {/* Layer 1 — atmospheric canvas (fixed, pointer-events: none) */}
-      <AtmosphereCanvas effects={effects} />
+      <AtmosphereCanvas effects={effects} river={river} />
 
       {/* Layer 2 — content */}
       <div className={`screen-content${showProgress ? " screen-content--with-bar" : ""}`}>

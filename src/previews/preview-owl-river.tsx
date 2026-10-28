@@ -3,9 +3,13 @@ import ReactDOM from "react-dom/client";
 import { OwlValleyRiverPreview } from "../components/previews/OwlValleyRiverPreview";
 
 /**
- * Standalone mount for OwlValleyRiverPreview — isolated from the live app.
- * Loaded only by preview-owl-river.html (a separate Vite HTML entry).
- * Not referenced by src/main.tsx, App.tsx, or any existing screen.
+ * Standalone mount for OwlValleyRiverPreview.
+ *
+ * Loaded only by preview-owl-river.html, a separate Vite HTML entry, and not
+ * referenced by src/main.tsx or App.tsx. The screen is isolated; the river it
+ * draws is not — it renders from src/lib/riverFlow.ts, the same geometry and
+ * motion the shipping AtmosphereCanvas uses, so what is previewed here is
+ * what the app actually does.
  */
 function PreviewHarness() {
   const [isReducedMotion, setIsReducedMotion] = useState(false);
@@ -26,10 +30,12 @@ function PreviewHarness() {
     >
       <header style={{ maxWidth: 900, textAlign: "center" }}>
         <h1 style={{ fontFamily: "Georgia, serif", fontWeight: 400, fontSize: 24, margin: "0 0 6px" }}>
-          Owl Valley River — React/Canvas Preview
+          Spline River — Canvas Preview
         </h1>
         <p style={{ margin: 0, color: "#aebdd4", fontSize: 13.5, lineHeight: 1.6 }}>
-          Isolated preview of <code>OwlValleyRiverPreview.tsx</code>. Not wired into the live app.
+          Renders the pixel-traced river geometry from <code>src/lib/riverFlow.ts</code> over the
+          real background plate, through the same cover-crop the app uses. Switch scene and
+          viewport to check the current stays on the painted water.
         </p>
       </header>
 
@@ -39,7 +45,7 @@ function PreviewHarness() {
           checked={isReducedMotion}
           onChange={(e) => setIsReducedMotion(e.target.checked)}
         />
-        Reduced motion (models prefers-reduced-motion support)
+        Reduced motion (freezes the river, as the app does)
       </label>
 
       <OwlValleyRiverPreview isReducedMotion={isReducedMotion} />

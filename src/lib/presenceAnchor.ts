@@ -73,13 +73,71 @@ export type ResolvedAnchor = {
 };
 
 /**
- * Map an anchor from image space into canvas/screen space, replicating the
- * geometry of `background-size: cover` with a vertically centered position.
+ * Where a `cover`-scaled plate actually lands inside a viewport.
+ *
+ * This is the one piece of geometry everything else here is built on, so it
+ * is exposed separately: presences are not the only thing that has to line up
+ * with the painting. The river spline in riverFlow.ts is traced in the same
+ * image space and projected through the same frame.
+ */
+export type CoverFrame = {
+  /** Where the plate's left/top edge sits, in CSS pixels. Usually negative. */
+  offsetX: number;
+  offsetY: number;
+  /** On-screen size of the scaled plate, in CSS pixels. */
+  dw: number;
+  dh: number;
+  /** The viewport the plate was fitted to, carried along for bounds checks. */
+  viewportW: number;
+  viewportH: number;
+};
+
+/**
+ * Replicate the geometry of `background-size: cover` with a vertically
+ * centered position.
  *
  * `cover` scales the image by whichever axis needs the most magnification to
  * fill the viewport, so the scale factor is the max of the two ratios. The
  * resulting plate is at least as large as the viewport on both axes, and the
  * overflow is distributed according to `background-position`.
+ */
+export function resolveCoverFrame(
+  imageW: number,
+  imageH: number,
+  align: AnchorAlign,
+  viewportW: number,
+  viewportH: number,
+): CoverFrame {
+  const scale = Math.max(viewportW / imageW, viewportH / imageH);
+  const dw = imageW * scale;
+  const dh = imageH * scale;
+
+  // Overflow (dw - viewportW) is pushed off one side, split, or off the other.
+  const offsetX =
+    align === "left" ? 0 : align === "right" ? viewportW - dw : (viewportW - dw) / 2;
+
+  // Vertical alignment is "center" for every scene in the app.
+  const offsetY = (viewportH - dh) / 2;
+
+  return { offsetX, offsetY, dw, dh, viewportW, viewportH };
+}
+
+/** Project a point given in image fractions into CSS pixels. */
+export function projectImagePoint(
+  frame: CoverFrame,
+  fx: number,
+  fy: number,
+): { x: number; y: number } {
+  return { x: frame.offsetX + fx * frame.dw, y: frame.offsetY + fy * frame.dh };
+}
+
+/** Is a projected point inside the visible viewport? */
+export function isOnScreen(frame: CoverFrame, x: number, y: number): boolean {
+  return x >= 0 && x <= frame.viewportW && y >= 0 && y <= frame.viewportH;
+}
+
+/**
+ * Map an anchor from image space into canvas/screen space.
  *
  * `dw`/`dh` are returned so callers can size glows relative to the plate
  * rather than the viewport, keeping a halo proportional to the animal instead
@@ -90,30 +148,21 @@ export function resolveAnchor(
   viewportW: number,
   viewportH: number,
 ): ResolvedAnchor {
-  const scale = Math.max(viewportW / anchor.imageW, viewportH / anchor.imageH);
-  const dw = anchor.imageW * scale;
-  const dh = anchor.imageH * scale;
-
-  // Overflow (dw - viewportW) is pushed off one side, split, or off the other.
-  const offsetX =
-    anchor.align === "left"
-      ? 0
-      : anchor.align === "right"
-        ? viewportW - dw
-        : (viewportW - dw) / 2;
-
-  // Vertical alignment is "center" for every scene in the app.
-  const offsetY = (viewportH - dh) / 2;
-
-  const x = offsetX + anchor.fx * dw;
-  const y = offsetY + anchor.fy * dh;
+  const frame = resolveCoverFrame(
+    anchor.imageW,
+    anchor.imageH,
+    anchor.align,
+    viewportW,
+    viewportH,
+  );
+  const { x, y } = projectImagePoint(frame, anchor.fx, anchor.fy);
 
   return {
     x,
     y,
-    dw,
-    dh,
-    visible: x >= 0 && x <= viewportW && y >= 0 && y <= viewportH,
+    dw: frame.dw,
+    dh: frame.dh,
+    visible: isOnScreen(frame, x, y),
   };
 }
 

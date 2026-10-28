@@ -1,10 +1,21 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import {
   resolveAnchor,
+  resolveCoverFrame,
+  projectImagePoint,
   TURTLE_ANCHOR,
   OWL_ANCHOR,
   FOX_ANCHOR,
 } from "../lib/presenceAnchor";
+import {
+  buildRiverPath,
+  sampleRiver,
+  advanceAlongRiver,
+  riverVisibility,
+  RIVER_VISIBILITY_THRESHOLD,
+  type RiverGeometry,
+  type RiverPath,
+} from "../lib/riverFlow";
 
 export type EffectType =
   | "clouds"
@@ -40,6 +51,17 @@ type Streak = {
   speed: number; phase: number;
 };
 
+type Glint = {
+  /** Normalised position along the river's arc length, 0..1. */
+  u: number;
+  /** Across-channel offset, -1 (left bank) .. 1 (right bank). */
+  lateral: number;
+  len: number; alpha: number;
+  phase: number;
+  /** Arc-length units per millisecond, before the channel's speedMul. */
+  speed: number;
+};
+
 type Firefly = {
   x: number; y: number;
   dx: number; dy: number;
@@ -68,6 +90,15 @@ function makeClouds(): Cloud[] {
   ];
 }
 
+/**
+ * Vertical band leaves are allowed to occupy, as a fraction of the viewport.
+ *
+ * Starts below the skyline on every plate in the app. Above this is open sky
+ * or distant ridge, where a drifting leaf has nothing to have fallen from.
+ */
+const LEAF_TOP = 0.22;
+const LEAF_SPAN = 1.06 - LEAF_TOP;
+
 function makeLeaves(): Leaf[] {
   const seeds: [number, number, number, number][] = [
     [0.12, 0.18, 3, 90], [0.32, 0.48, 4, 130], [0.51, 0.14, 2, 80],
@@ -81,7 +112,10 @@ function makeLeaves(): Leaf[] {
     [0.53, 0.31, 3, 103],
   ];
   return seeds.map(([x, y, size, hue], i) => ({
-    x, y,
+    x,
+    // Seeds are authored as 0..1 for readability, then compressed into the
+    // canopy band so none of them start life in open sky.
+    y: LEAF_TOP + y * LEAF_SPAN,
     vx: -(0.00038 + (i % 5) * 0.00009),
     vy:  0.00018 + (i % 4) * 0.00005,
     rot: i * 0.72,
@@ -107,6 +141,28 @@ function makeStreaks(): Streak[] {
       phase: i * 0.87,
     };
   });
+}
+
+/**
+ * Glints for the spline river.
+ *
+ * `u` is a position along the river's arc length, not a screen coordinate, so
+ * a glint stays on the water at any viewport. `lateral` spreads it across the
+ * channel: all glints on the centre line would read as a single seam rather
+ * than as a surface.
+ */
+function makeGlints(): Glint[] {
+  return Array.from({ length: 54 }, (_, i) => ({
+    // Golden-ratio spacing distributes the pool along the river without the
+    // banding a simple i/n would produce once speedMul starts compressing
+    // them through the narrow stretches.
+    u: (i * 0.6180339887) % 1,
+    lateral: ((i % 7) / 6) * 2 - 1,
+    len: 0.016 + (i % 5) * 0.009,
+    alpha: 0.055 + (i % 6) * 0.022,
+    phase: i * 0.83,
+    speed: 0.000026 + (i % 4) * 0.0000085,
+  }));
 }
 
 function makeFireflies(): Firefly[] {
@@ -192,8 +248,12 @@ function renderLeaves(
     l.y += l.vy + Math.cos(t * l.swayFreq * 0.65 + l.phase) * 0.00012;
     l.rot += l.rotV;
 
-    if (l.x < -0.06) { l.x = 1.06; l.y = (l.y + 0.15) % 1.0; }
-    if (l.y >  1.06) { l.y = -0.06; l.x = (l.x + 0.25) % 1.0; }
+    // Leaves live in the canopy and below, never in open sky. Previously they
+    // wrapped through the full 0..1 height, which sent them drifting across
+    // the moon and the horizon — foliage floating through empty air reads as
+    // debris on the lens and breaks the one illusion these scenes depend on.
+    if (l.x < -0.06) { l.x = 1.06; l.y = LEAF_TOP + ((l.y + 0.15) % LEAF_SPAN); }
+    if (l.y >  1.06) { l.y = LEAF_TOP; l.x = (l.x + 0.25) % 1.0; }
 
     const lx = l.x * w;
     const ly = l.y * h;
@@ -215,6 +275,123 @@ function renderLeaves(
     ctx.globalAlpha = 1;
     ctx.restore();
   });
+}
+
+/**
+ * River that follows the water painted into the plate.
+ *
+ * The band renderer below fills the bottom 40% of the viewport and slides
+ * streaks left-to-right across it. Every river in this app is a winding
+ * diagonal, so that current visibly flows ACROSS the painting instead of
+ * along it. This version projects a traced centre line through the same
+ * cover-crop geometry the background uses, so the motion runs downstream at
+ * every viewport size.
+ *
+ * `dtMs` rather than a fixed per-frame step: glint speed varies with channel
+ * width, and a fixed step would make the whole river run faster on a 120Hz
+ * display than on a 60Hz one.
+ */
+function renderSplineRiver(
+  ctx: CanvasRenderingContext2D,
+  w: number,
+  h: number,
+  t: number,
+  dtMs: number,
+  geometry: RiverGeometry,
+  path: RiverPath,
+  glints: Glint[],
+) {
+  const frame = resolveCoverFrame(
+    geometry.imageW,
+    geometry.imageH,
+    geometry.align,
+    w,
+    h,
+  );
+
+  // `cover` scales both axes equally, so a unit vector in image space is
+  // still a unit vector on screen. That is what lets the traced tangents be
+  // used directly below without re-deriving them per viewport.
+
+  // ── Sheen along the channel ──────────────────────────────────────────────
+  // A ribbon traced from the river's own banks, not a rectangle. Kept very
+  // low contrast: the water is already painted, this only has to make it
+  // look wet.
+  const RIBBON_STEPS = 48;
+  const left: { x: number; y: number }[] = [];
+  const right: { x: number; y: number }[] = [];
+
+  for (let i = 0; i <= RIBBON_STEPS; i++) {
+    const s = sampleRiver(path, i / RIBBON_STEPS);
+    // Normal to the downstream tangent.
+    const nx = -s.ty;
+    const ny = s.tx;
+    const hw = s.w / 2;
+    left.push(projectImagePoint(frame, s.x + nx * hw, s.y + ny * hw));
+    right.push(projectImagePoint(frame, s.x - nx * hw, s.y - ny * hw));
+  }
+
+  const head = projectImagePoint(frame, path.samples[0].x, path.samples[0].y);
+  const mouthSample = path.samples[path.samples.length - 1];
+  const mouth = projectImagePoint(frame, mouthSample.x, mouthSample.y);
+
+  const breathe = 0.016 + Math.sin(t * 0.00075) * 0.005;
+  const sheen = ctx.createLinearGradient(head.x, head.y, mouth.x, mouth.y);
+  sheen.addColorStop(0, "rgba(120, 180, 215, 0)");
+  sheen.addColorStop(0.3, `rgba(110, 175, 212, ${breathe * 0.8})`);
+  sheen.addColorStop(0.7, `rgba(95, 155, 196, ${breathe * 1.25})`);
+  sheen.addColorStop(1, `rgba(70, 120, 162, ${breathe * 0.7})`);
+
+  ctx.beginPath();
+  left.forEach((p, i) => (i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)));
+  for (let i = right.length - 1; i >= 0; i--) ctx.lineTo(right[i].x, right[i].y);
+  ctx.closePath();
+  ctx.fillStyle = sheen;
+  ctx.fill();
+
+  // ── Glints carried by the current ────────────────────────────────────────
+  ctx.save();
+  // Clipped to the channel so a glint riding the outer edge of a tight bend
+  // cannot stray onto the bank.
+  ctx.clip();
+
+  glints.forEach((g) => {
+    g.u = advanceAlongRiver(path, g.u, dtMs, g.speed);
+
+    const s = sampleRiver(path, g.u);
+    const nx = -s.ty;
+    const ny = s.tx;
+    // Pulled in from the banks: the very edge is shallow and broken, and a
+    // clean highlight there reads as a hard outline rather than as water.
+    const off = g.lateral * (s.w / 2) * 0.72;
+    const c = projectImagePoint(frame, s.x + nx * off, s.y + ny * off);
+
+    // Longer and brighter in fast, narrow water; shorter in the calm pools.
+    const len = g.len * frame.dw * (0.6 + s.speedMul * 0.5);
+    const shimmer = 0.42 + Math.sin(t * 0.0019 + g.phase) * 0.34;
+    const a = g.alpha * shimmer * (0.55 + s.turbulence * 0.75);
+
+    const hx = (s.tx * len) / 2;
+    const hy = (s.ty * len) / 2;
+
+    const sg = ctx.createLinearGradient(c.x - hx, c.y - hy, c.x + hx, c.y + hy);
+    sg.addColorStop(0, "rgba(140, 205, 240, 0)");
+    sg.addColorStop(0.4, `rgba(175, 225, 252, ${a})`);
+    sg.addColorStop(0.62, `rgba(200, 238, 255, ${a})`);
+    sg.addColorStop(1, "rgba(140, 205, 240, 0)");
+
+    ctx.strokeStyle = sg;
+    // Scaled off the channel so highlights stay proportional to the water,
+    // then clamped: a hairline disappears, and anything thick reads as foam.
+    ctx.lineWidth = Math.max(1, Math.min(2.8, s.w * frame.dw * 0.05));
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.moveTo(c.x - hx, c.y - hy);
+    ctx.lineTo(c.x + hx, c.y + hy);
+    ctx.stroke();
+  });
+
+  ctx.restore();
 }
 
 function renderRiver(
@@ -482,6 +659,16 @@ function renderFoxPresence(
 
 type Props = {
   effects: EffectType[];
+  /**
+   * Traced geometry of the river painted into this scene's plate.
+   *
+   * Optional on purpose. Only the Owl Valley and Summary plates have had
+   * their rivers pixel-traced and checked against the art; the turtle, fox
+   * and cave scenes keep the generic band until theirs are traced too.
+   * Guessing a spline for them would put a current on dry ground, which is
+   * strictly worse than the band it replaced.
+   */
+  river?: RiverGeometry;
 };
 
 /**
@@ -494,7 +681,7 @@ type Props = {
  */
 const STATIC_FRAME_T = 6000;
 
-export function AtmosphereCanvas({ effects }: Props) {
+export function AtmosphereCanvas({ effects, river }: Props) {
   const canvasRef  = useRef<HTMLCanvasElement>(null);
   const rafRef     = useRef<number>(0);
   const effectsRef = useRef(effects);
@@ -505,6 +692,20 @@ export function AtmosphereCanvas({ effects }: Props) {
   const streaks   = useRef(makeStreaks());
   const fireflies = useRef(makeFireflies());
   const fog       = useRef(makeFog());
+  const glints    = useRef(makeGlints());
+
+  // Interpolating ~250 spline samples is not something to redo 60 times a
+  // second for a curve that never changes.
+  const riverPath = useMemo(
+    () => (river ? buildRiverPath(river.controls) : null),
+    [river],
+  );
+  const riverRef = useRef<{ geometry: RiverGeometry; path: RiverPath } | null>(null);
+  riverRef.current = river && riverPath ? { geometry: river, path: riverPath } : null;
+
+  // Previous RAF timestamp, so glints advance by real elapsed time rather
+  // than by a step that assumes 60Hz.
+  const lastTRef = useRef<number | null>(null);
 
   // Re-rendering a static frame is needed whenever the scene changes while
   // motion is suppressed, since there is no RAF loop to pick the change up.
@@ -520,12 +721,31 @@ export function AtmosphereCanvas({ effects }: Props) {
       const h  = window.innerHeight;
       const fx = effectsRef.current;
 
+      // Clamped: a backgrounded tab resumes with a gap of many seconds, and
+      // an unclamped dt would teleport every glint down the river at once.
+      const prev = lastTRef.current;
+      const dtMs = prev === null ? 16.7 : Math.min(50, Math.max(0, t - prev));
+      lastTRef.current = t;
+
       ctx.clearRect(0, 0, w, h);
 
       // Render order: fog → clouds → river → character presence → leaves → fireflies
       if (fx.includes("fog"))             renderFog(ctx, w, h, t, fog.current);
       if (fx.includes("clouds"))          renderClouds(ctx, w, h, t, clouds.current);
-      if (fx.includes("river"))           renderRiver(ctx, w, h, t, streaks.current);
+
+      if (fx.includes("river")) {
+        const r = riverRef.current;
+        // A traced river that the cover-crop has pushed off screen is not
+        // drawn at all, and is NOT replaced by the band: on the Owl Valley
+        // plate at portrait sizes the water genuinely is not in frame, and
+        // the band would paint a current across a forested hillside.
+        if (r && riverVisibility(r.geometry, r.path, w, h) >= RIVER_VISIBILITY_THRESHOLD) {
+          renderSplineRiver(ctx, w, h, t, dtMs, r.geometry, r.path, glints.current);
+        } else if (!r) {
+          renderRiver(ctx, w, h, t, streaks.current);
+        }
+      }
+
       if (fx.includes("turtle-presence")) renderTurtlePresence(ctx, w, h, t);
       if (fx.includes("owl-presence"))    renderOwlPresence(ctx, w, h, t);
       if (fx.includes("fox-presence"))    renderFoxPresence(ctx, w, h, t);
@@ -592,7 +812,7 @@ export function AtmosphereCanvas({ effects }: Props) {
   // otherwise leave the previous screen's effects frozen on the canvas.
   useEffect(() => {
     redrawStaticRef.current();
-  }, [effects]);
+  }, [effects, river]);
 
   return (
     <canvas
