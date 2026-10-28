@@ -466,7 +466,12 @@ function renderFog(
 ) {
   patches.forEach((p) => {
     p.x += p.vx;
-    if (p.x > 1.6) p.x = -0.9;
+    // Wrap once the patch's trailing edge has actually left the frame, and
+    // re-enter by its own width. The old fixed 1.6 / -0.9 pair ignored `w`,
+    // so the widest bank vanished while still half on screen and the
+    // narrowest waited offscreen before returning — a visible pop in the one
+    // layer whose whole job is to be imperceptible.
+    if (p.x > 1 + p.w) p.x = -p.w;
 
     const breathe = p.alpha * (0.62 + Math.sin(t * 0.00016 + p.phase) * 0.38);
     const cx = (p.x + p.w / 2) * w;
