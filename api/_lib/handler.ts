@@ -1,5 +1,5 @@
 /**
- * Shared handler factory for the three character stub endpoints.
+ * Shared handler factory for the three character endpoints.
  *
  * Request lifecycle:
  *   1. Apply CORS/security headers (short-circuits on OPTIONS preflight).
@@ -7,7 +7,25 @@
  *   3. Rate limit by client IP (429 + Retry-After on breach).
  *   4. Reject oversized bodies via Content-Length (413).
  *   5. Validate the body shape against PanelInput rules (400 on failure).
- *   6. Return a clearly-labeled stub response (200).
+ *   6. Validate optional conversation history (400 on failure).
+ *   7. Assemble context and route to the character (200).
+ *
+ * ── Why step 7 cannot fail ────────────────────────────────────────────────
+ *
+ * routeToCharacter() does not throw. A provider timeout or outage yields a
+ * deterministic response rather than a 5xx, because the user reaches this
+ * endpoint immediately after describing something painful, and an error
+ * state at that moment is the one outcome the app cannot afford. The
+ * degradation is recorded in meta.fallback for logs and QA; the user simply
+ * gets an answer. The try/catch below therefore guards against programming
+ * errors in steps 1–6, not against model failure.
+ *
+ * ── Cost ──────────────────────────────────────────────────────────────────
+ *
+ * Wiring this endpoint does not begin paid API usage. Provider selection is
+ * fail-closed (see modelProvider.ts): the mock is returned unless an operator
+ * sets BOTH MODEL_PROVIDER=anthropic and ANTHROPIC_API_KEY, and the live
+ * provider is deliberately unimplemented pending explicit approval.
  *
  * All steps are wrapped in try/catch; unexpected errors are logged
  * server-side only and the client receives a generic 500 with no stack
@@ -16,8 +34,9 @@
 
 import { getClientIp, checkRateLimit } from "./rateLimit.js";
 import { applySecurityHeaders } from "./security.js";
-import { validatePanelInput } from "./validate.js";
-import type { ApiHandler, ApiRequest, ApiResponse, CharacterName, StubResponse } from "./types.js";
+import { validateConversationTurns, validatePanelInput } from "./validate.js";
+import { buildContext, routeToCharacter } from "./orchestrator.js";
+import type { ApiHandler, ApiRequest, ApiResponse, CharacterName } from "./types.js";
 
 // Hard cap on request body size (bytes), checked via Content-Length before
 // any JSON parsing happens. 10 KB is generous for this payload shape
@@ -64,17 +83,40 @@ export function createCharacterHandler(character: CharacterName): ApiHandler {
         return;
       }
 
-      const { emotion, goal, urgency, intensity } = validation.data;
+      const turnsValidation = validateConversationTurns(req.body);
+      if (!turnsValidation.valid) {
+        sendError(res, 400, "INVALID_INPUT", turnsValidation.reason);
+        return;
+      }
 
-      const stubResponse: StubResponse = {
-        stub: true,
-        message: "Backend scaffold — real model integration pending Phase 1",
-        character,
+      const input = validation.data;
+      const context = buildContext(turnsValidation.data, input, character);
+      const response = await routeToCharacter({ character, input, context });
+
+      if (response.meta.fallback) {
+        // Worth an alert: the user was served the safety net, not the model.
+        // Logged server-side only — fallbackReason can name a provider.
+        // eslint-disable-next-line no-console
+        console.error(
+          `[api/${character}] served deterministic fallback:`,
+          response.meta.fallbackReason,
+        );
+      }
+
+      // fallbackReason is stripped. It is diagnostic text that may name an
+      // upstream provider or quote an internal error, and it has no business
+      // crossing the network boundary. meta.fallback still tells an honest
+      // client that the response was degraded.
+      const { fallbackReason: _omitted, ...meta } = response.meta;
+
+      res.status(200).json({
+        character: response.character,
+        payload: response.payload,
+        integrityReview: response.integrityReview,
+        ...(response.handoffOffer ? { handoffOffer: response.handoffOffer } : {}),
+        meta,
         receivedAt: new Date().toISOString(),
-        echo: { emotion, goal, urgency, intensity },
-      };
-
-      res.status(200).json(stubResponse);
+      });
     } catch (err) {
       // Never leak stack traces or internal error detail to the client.
       // eslint-disable-next-line no-console

@@ -16,9 +16,29 @@
  * be unit-tested in isolation if/when tests are added.
  */
 
-import type { EmotionOption, GoalOption, PanelInput, UrgencyOption } from "./types.js";
+import type {
+  CharacterName,
+  EmotionOption,
+  GoalOption,
+  PanelInput,
+  UrgencyOption,
+} from "./types.js";
+import type { ConversationTurn } from "./orchestrator.js";
 
 export const MAX_CONFLICT_DESCRIPTION_LENGTH = 4000;
+
+/**
+ * Hard cap on how many prior turns a client may submit.
+ *
+ * buildContext() windows history down anyway, so a larger array buys the user
+ * nothing while still costing the server the parse. Rejecting past the cap
+ * keeps the cost of a request bounded by the protocol rather than by the
+ * caller's goodwill.
+ */
+export const MAX_TURNS = 40;
+
+/** Per-turn content cap, matching the free-text cap on the intake. */
+export const MAX_TURN_CONTENT_LENGTH = 4000;
 
 const EMOTION_OPTIONS: readonly EmotionOption[] = [
   "angry",
@@ -112,4 +132,103 @@ export function validatePanelInput(body: unknown): ValidationResult {
       urgency: urgency as UrgencyOption,
     },
   };
+}
+
+// ─── Conversation turns ────────────────────────────────────────────────────
+
+const CHARACTER_NAMES: readonly CharacterName[] = ["turtle", "owl", "fox"];
+
+export type TurnsValidationResult =
+  | { valid: true; data: ConversationTurn[] }
+  | { valid: false; reason: string };
+
+/**
+ * Validate the OPTIONAL `turns` array on a request body.
+ *
+ * Optional on purpose: the first request of a session legitimately has no
+ * history, and requiring an empty array would make the simplest possible
+ * call the most fiddly one to construct.
+ *
+ * The client supplies history because these endpoints are stateless — there
+ * is no session store, which is a deliberate privacy property: nothing a user
+ * says about their conflict is retained server-side between requests. The
+ * cost of that is that history is caller-controlled and therefore untrusted,
+ * so it is validated as strictly as the intake itself.
+ *
+ * Note that a client-supplied `role: "system"` turn is accepted. These
+ * endpoints do not build a model prompt from raw turn text today — the
+ * deterministic engine reads only PanelInput — but before a live provider is
+ * enabled, "system" must be rejected here or namespaced, or it becomes a
+ * prompt-injection seam. Recorded as a precondition on enabling live calls.
+ */
+export function validateConversationTurns(body: unknown): TurnsValidationResult {
+  if (!isPlainObject(body)) {
+    return { valid: false, reason: "Request body must be a JSON object." };
+  }
+
+  const { turns } = body;
+  if (turns === undefined || turns === null) {
+    return { valid: true, data: [] };
+  }
+
+  if (!Array.isArray(turns)) {
+    return { valid: false, reason: "`turns`, if present, must be an array." };
+  }
+
+  if (turns.length > MAX_TURNS) {
+    return { valid: false, reason: `\`turns\` must contain ${MAX_TURNS} entries or fewer.` };
+  }
+
+  const validated: ConversationTurn[] = [];
+
+  for (let i = 0; i < turns.length; i++) {
+    const turn = turns[i];
+    if (!isPlainObject(turn)) {
+      return { valid: false, reason: `\`turns[${i}]\` must be an object.` };
+    }
+
+    const { role, content, character, timestamp } = turn;
+
+    if (role !== "user" && role !== "character" && role !== "system") {
+      return {
+        valid: false,
+        reason: `\`turns[${i}].role\` must be "user", "character", or "system".`,
+      };
+    }
+
+    if (typeof content !== "string") {
+      return { valid: false, reason: `\`turns[${i}].content\` must be a string.` };
+    }
+
+    if (content.length > MAX_TURN_CONTENT_LENGTH) {
+      return {
+        valid: false,
+        reason: `\`turns[${i}].content\` must be ${MAX_TURN_CONTENT_LENGTH} characters or fewer.`,
+      };
+    }
+
+    if (role === "character" && !CHARACTER_NAMES.includes(character as CharacterName)) {
+      return {
+        valid: false,
+        reason: `\`turns[${i}].character\` must be one of: ${CHARACTER_NAMES.join(", ")}.`,
+      };
+    }
+
+    // A malformed timestamp is repaired rather than rejected. It is used only
+    // for ordering a summary, so refusing the whole request over a clock
+    // formatting difference would be a poor trade.
+    const stamp =
+      typeof timestamp === "string" && !Number.isNaN(Date.parse(timestamp))
+        ? timestamp
+        : new Date().toISOString();
+
+    validated.push({
+      role,
+      content: content.trim(),
+      timestamp: stamp,
+      ...(role === "character" ? { character: character as CharacterName } : {}),
+    });
+  }
+
+  return { valid: true, data: validated };
 }

@@ -68,18 +68,10 @@ export type PanelInput = {
 
 export type CharacterName = "turtle" | "owl" | "fox";
 
-export type StubResponse = {
-  stub: true;
-  message: string;
-  character: CharacterName;
-  receivedAt: string;
-  echo: {
-    emotion: EmotionOption;
-    goal: GoalOption;
-    urgency: UrgencyOption;
-    intensity: number;
-  };
-};
+// StubResponse — the Phase 0 echo payload — was removed when these endpoints
+// began returning real character content. The honest signal now lives on
+// CharacterResponse.meta.stub (orchestrator.ts), which reports whether a live
+// model was involved rather than hardcoding `true`.
 
 export type ApiErrorResponse = {
   error: string;
